@@ -1,0 +1,94 @@
+package com.miempresa.ecocoinscampus.presentation.recompensas
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.miempresa.ecocoinscampus.data.model.Recompensa
+import com.miempresa.ecocoinscampus.data.repository.RecompensasRepository
+import com.miempresa.ecocoinscampus.utils.Result
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class RecompensasUiState(
+    val isLoading: Boolean = false,
+    val recompensas: List<Recompensa> = emptyList(),
+    val canjeExitoso: Boolean = false,
+    val error: String? = null
+)
+
+@HiltViewModel
+class RecompensasViewModel @Inject constructor(
+    private val recompensasRepository: RecompensasRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(RecompensasUiState())
+    val uiState: StateFlow<RecompensasUiState> = _uiState.asStateFlow()
+
+    init {
+        loadRecompensas()
+    }
+
+    fun loadRecompensas() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            when (val result = recompensasRepository.getRecompensas()) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            recompensas = result.data
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun canjearRecompensa(recompensaId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null, canjeExitoso = false) }
+
+            when (val result = recompensasRepository.canjearRecompensa(recompensaId)) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            canjeExitoso = true
+                        )
+                    }
+
+                    // Recargar recompensas
+                    loadRecompensas()
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun resetCanjeExitoso() {
+        _uiState.update { it.copy(canjeExitoso = false) }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+}
