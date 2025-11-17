@@ -29,17 +29,23 @@ data class User(
     val imagenPerfil: String? = null
 )
 
-// Requests de autenticación
 data class LoginRequest(
+    @SerializedName("correo")
     val email: String,
+    @SerializedName("contrasenia")
     val password: String
 )
 
 data class RegisterRequest(
+    @SerializedName("nombre")
     val nombre: String,
+    @SerializedName("correo")
     val email: String,
+    @SerializedName("contrasenia")
     val password: String,
+    @SerializedName("carrera")
     val carrera: String,
+    @SerializedName("rol")
     val rol: String = "estudiante"
 )
 
