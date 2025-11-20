@@ -1,61 +1,94 @@
 package com.miempresa.ecocoinscampus.data.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
-@Entity(tableName = "users")
 data class User(
-    @PrimaryKey
     @SerializedName("_id")
     val id: String,
 
     @SerializedName("nombre")
     val nombre: String,
 
-    @SerializedName("email")
-    val email: String,
+    @SerializedName("correo")
+    val correo: String,
 
     @SerializedName("rol")
-    val rol: String = "estudiante",
+    val rol: String = "usuario",
 
-    @SerializedName("eco_coins")
-    val ecoCoins: Double = 0.0,
+    @SerializedName("ecoCoins")
+    val ecoCoins: Int = 0,
 
     @SerializedName("carrera")
     val carrera: String? = null,
 
-    @SerializedName("imagen_perfil")
-    val imagenPerfil: String? = null
+    @SerializedName("telefono")
+    val telefono: String? = null,
+
+    @SerializedName("nivel")
+    val nivel: Int = 1,
+
+    @SerializedName("totalReciclajes")
+    val totalReciclajes: Int = 0,
+
+    @SerializedName("totalKgReciclados")
+    val totalKgReciclados: Double = 0.0,
+
+    @SerializedName("estado")
+    val estado: String = "activo"
 )
+
+// ===================================
+// REQUEST MODELS
+// ===================================
 
 data class LoginRequest(
     @SerializedName("correo")
-    val email: String,
+    val correo: String,
+
     @SerializedName("contrasenia")
-    val password: String
+    val contrasenia: String
 )
 
 data class RegisterRequest(
     @SerializedName("nombre")
     val nombre: String,
+
     @SerializedName("correo")
-    val email: String,
+    val correo: String,
+
     @SerializedName("contrasenia")
-    val password: String,
+    val contrasenia: String,
+
     @SerializedName("carrera")
     val carrera: String,
-    @SerializedName("rol")
-    val rol: String = "estudiante"
+
+    @SerializedName("telefono")
+    val telefono: String? = null
 )
 
-data class AuthResponse(
-    @SerializedName("mensaje")
-    val mensaje: String,
+// ===================================
+// RESPONSE MODELS
+// ===================================
 
-    @SerializedName("usuario")
-    val usuario: User,
-
+data class LoginResponse(
     @SerializedName("token")
-    val token: String? = null
+    val token: String,
+
+    @SerializedName("tipo")
+    val tipo: String = "Bearer",
+
+    @SerializedName("id")
+    val id: String,
+
+    @SerializedName("nombre")
+    val nombre: String,
+
+    @SerializedName("correo")
+    val correo: String,
+
+    @SerializedName("rol")
+    val rol: String,
+
+    @SerializedName("ecoCoins")
+    val ecoCoins: Int
 )

@@ -10,16 +10,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaterialesScreen(
     onNavigateBack: () -> Unit,
-    viewModel: MaterialesViewModel = hiltViewModel()
+    viewModel: ReciclajesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
@@ -50,13 +49,13 @@ fun MaterialesScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (uiState.materials.isEmpty() && !uiState.isLoading) {
+            if (uiState.reciclajes.isEmpty() && !uiState.isLoading) {
                 item {
                     EmptyState()
                 }
             } else {
-                items(uiState.materials) { material ->
-                    MaterialCard(material)
+                items(uiState.reciclajes) { reciclaje ->
+                    ReciclajeCard(reciclaje)
                 }
             }
         }
@@ -67,7 +66,7 @@ fun MaterialesScreen(
             tipos = uiState.tiposMateriales,
             onDismiss = { showDialog = false },
             onConfirm = { tipo, cantidad, punto ->
-                viewModel.registerMaterial(tipo, cantidad, punto)
+                viewModel.registrarReciclaje(tipo, cantidad, punto)
                 showDialog = false
             }
         )
@@ -75,7 +74,7 @@ fun MaterialesScreen(
 }
 
 @Composable
-fun MaterialCard(material: com.miempresa.ecocoinscampus.data.model.Material) {
+fun ReciclajeCard(reciclaje: com.miempresa.ecocoinscampus.data.model.Reciclaje) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -87,16 +86,16 @@ fun MaterialCard(material: com.miempresa.ecocoinscampus.data.model.Material) {
         ) {
             Column {
                 Text(
-                    material.tipo,
+                    reciclaje.tipoMaterial,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "${material.cantidad} kg",
+                    "${reciclaje.pesoKg} kg",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    material.fecha,
+                    reciclaje.fecha.take(10),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -104,7 +103,7 @@ fun MaterialCard(material: com.miempresa.ecocoinscampus.data.model.Material) {
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "+${material.ecocoinsGeneradas}",
+                    "+${reciclaje.ecoCoinsGanadas}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -224,7 +223,8 @@ fun EmptyState() {
         Text(
             "Registra tu primer material para empezar",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }

@@ -13,10 +13,8 @@ import javax.inject.Inject
 data class DashboardUiState(
     val isLoading: Boolean = false,
     val user: User? = null,
-    val estadisticas: EstadisticasGenerales? = null,
-    val ranking: List<UserRanking> = emptyList(),
-    val materialesMasReciclados: List<MaterialStat> = emptyList(),
-    val userMaterials: List<Material> = emptyList(),
+    val estadisticas: Estadisticas? = null,
+    val userReciclajes: List<Reciclaje> = emptyList(),
     val error: String? = null
 )
 
@@ -24,7 +22,7 @@ data class DashboardUiState(
 class DashboardViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val estadisticasRepository: EstadisticasRepository,
-    private val materialRepository: MaterialRepository
+    private val reciclajeRepository: ReciclajeRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -50,31 +48,24 @@ class DashboardViewModel @Inject constructor(
             }
 
             // Cargar estadísticas generales
-            when (val statsResult = estadisticasRepository.getEstadisticasGenerales()) {
+            when (val statsResult = estadisticasRepository.getEstadisticas()) {
                 is Result.Success -> {
                     _uiState.update { it.copy(estadisticas = statsResult.data) }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(error = statsResult.message) }
+                    // No mostrar error si las estadísticas fallan
                 }
                 else -> {}
             }
 
-            // Cargar ranking de usuarios
-            when (val rankingResult = estadisticasRepository.getRankingUsuarios(10)) {
+            // Cargar reciclajes del usuario
+            when (val reciclajesResult = reciclajeRepository.getUserReciclajes()) {
                 is Result.Success -> {
-                    _uiState.update { it.copy(ranking = rankingResult.data) }
+                    _uiState.update { it.copy(userReciclajes = reciclajesResult.data) }
                 }
-                is Result.Error -> {}
-                else -> {}
-            }
-
-            // Cargar materiales del usuario
-            when (val materialsResult = materialRepository.getUserMaterials()) {
-                is Result.Success -> {
-                    _uiState.update { it.copy(userMaterials = materialsResult.data) }
+                is Result.Error -> {
+                    // No mostrar error si los reciclajes fallan
                 }
-                is Result.Error -> {}
                 else -> {}
             }
 
@@ -94,5 +85,9 @@ class DashboardViewModel @Inject constructor(
                 else -> {}
             }
         }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 }

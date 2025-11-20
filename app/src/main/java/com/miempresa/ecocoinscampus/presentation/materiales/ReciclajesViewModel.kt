@@ -2,45 +2,47 @@ package com.miempresa.ecocoinscampus.presentation.materiales
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.miempresa.ecocoinscampus.data.model.Material
-import com.miempresa.ecocoinscampus.data.repository.MaterialRepository
+import com.miempresa.ecocoinscampus.data.model.Reciclaje
+import com.miempresa.ecocoinscampus.data.repository.ReciclajeRepository
 import com.miempresa.ecocoinscampus.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class MaterialesUiState(
+data class ReciclajesUiState(
     val isLoading: Boolean = false,
-    val materials: List<Material> = emptyList(),
+    val reciclajes: List<Reciclaje> = emptyList(),
     val tiposMateriales: List<String> = emptyList(),
+    val tarifas: Map<String, Int> = emptyMap(),
     val registroExitoso: Boolean = false,
     val error: String? = null
 )
 
 @HiltViewModel
-class MaterialesViewModel @Inject constructor(
-    private val materialRepository: MaterialRepository
+class ReciclajesViewModel @Inject constructor(
+    private val reciclajeRepository: ReciclajeRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MaterialesUiState())
-    val uiState: StateFlow<MaterialesUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ReciclajesUiState())
+    val uiState: StateFlow<ReciclajesUiState> = _uiState.asStateFlow()
 
     init {
-        loadMaterials()
+        loadReciclajes()
         loadTiposMateriales()
+        loadTarifas()
     }
 
-    private fun loadMaterials() {
+    private fun loadReciclajes() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = materialRepository.getUserMaterials()) {
+            when (val result = reciclajeRepository.getUserReciclajes()) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            materials = result.data
+                            reciclajes = result.data
                         )
                     }
                 }
@@ -59,18 +61,35 @@ class MaterialesViewModel @Inject constructor(
 
     private fun loadTiposMateriales() {
         _uiState.update {
-            it.copy(tiposMateriales = materialRepository.getTiposMateriales())
+            it.copy(tiposMateriales = reciclajeRepository.getTiposMateriales())
         }
     }
 
-    fun registerMaterial(tipo: String, cantidad: Double, puntoRecoleccion: String) {
+    private fun loadTarifas() {
+        viewModelScope.launch {
+            when (val result = reciclajeRepository.getTarifas()) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(tarifas = result.data) }
+                }
+                is Result.Error -> {
+                    // No mostrar error si las tarifas fallan
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun registrarReciclaje(tipoMaterial: String, pesoKg: Double, puntoRecoleccion: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, registroExitoso = false) }
 
-            when (val result = materialRepository.registerMaterial(tipo, cantidad, puntoRecoleccion)) {
+            when (val result = reciclajeRepository.registrarReciclaje(
+                tipoMaterial,
+                pesoKg,
+                puntoRecoleccion
+            )) {
                 is Result.Success -> {
-                    // Recargar lista de materiales
-                    loadMaterials()
+                    loadReciclajes()
 
                     _uiState.update {
                         it.copy(

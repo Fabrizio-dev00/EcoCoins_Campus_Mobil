@@ -1,6 +1,7 @@
 package com.miempresa.ecocoinscampus.di
 
-import com.miempresa.ecocoinscampus.data.remote.*
+import com.miempresa.ecocoinscampus.data.remote.ApiService
+import com.miempresa.ecocoinscampus.data.remote.RetrofitClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,13 +14,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideDjangoApiService(): DjangoApiService {
-        return RetrofitClient.djangoApi
-    }
-
-    @Provides
-    @Singleton
-    fun provideSpringApiService(): SpringApiService {
-        return RetrofitClient.springApi
+    fun provideApiService(): ApiService {
+        return RetrofitClient.api
     }
 }

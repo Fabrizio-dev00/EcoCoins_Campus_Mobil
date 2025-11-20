@@ -2,20 +2,20 @@ package com.miempresa.ecocoinscampus.data.repository
 
 import com.miempresa.ecocoinscampus.data.local.UserPreferences
 import com.miempresa.ecocoinscampus.data.model.*
-import com.miempresa.ecocoinscampus.data.remote.SpringApiService
+import com.miempresa.ecocoinscampus.data.remote.ApiService
 import com.miempresa.ecocoinscampus.utils.Result
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class EstadisticasRepository @Inject constructor(
-    private val springApi: SpringApiService,
+    private val apiService: ApiService,
     private val userPreferences: UserPreferences
 ) {
 
     /**
-     * Obtener estadísticas generales del campus
+     * Obtener estadísticas generales
      */
-    suspend fun getEstadisticasGenerales(): Result<EstadisticasGenerales> {
+    suspend fun getEstadisticas(): Result<Estadisticas> {
         return try {
             val token = userPreferences.authToken.first() ?: ""
 
@@ -23,12 +23,18 @@ class EstadisticasRepository @Inject constructor(
                 return Result.Error("No hay sesión activa")
             }
 
-            val response = springApi.getEstadisticasGenerales("Bearer $token")
+            val response = apiService.getEstadisticas("Bearer $token")
 
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                val apiResponse = response.body()!!
+
+                if (apiResponse.success && apiResponse.data != null) {
+                    Result.Success(apiResponse.data)
+                } else {
+                    Result.Error(apiResponse.message ?: "Error al obtener estadísticas")
+                }
             } else {
-                Result.Error("Error al obtener estadísticas: ${response.message()}")
+                Result.Error("Error: ${response.code()} - ${response.message()}")
             }
         } catch (e: Exception) {
             Result.Error("Error de conexión: ${e.localizedMessage}", e)
@@ -36,45 +42,29 @@ class EstadisticasRepository @Inject constructor(
     }
 
     /**
-     * Obtener ranking de usuarios con más ecoCoins
+     * Obtener estadísticas del usuario actual
      */
-    suspend fun getRankingUsuarios(limit: Int = 10): Result<List<UserRanking>> {
+    suspend fun getEstadisticasUsuario(): Result<EstadisticasUsuario> {
         return try {
             val token = userPreferences.authToken.first() ?: ""
+            val userId = userPreferences.userId.first() ?: ""
 
             if (token.isEmpty()) {
                 return Result.Error("No hay sesión activa")
             }
 
-            val response = springApi.getRankingUsuarios("Bearer $token", limit)
+            val response = apiService.getEstadisticasUsuario(userId, "Bearer $token")
 
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                val apiResponse = response.body()!!
+
+                if (apiResponse.success && apiResponse.data != null) {
+                    Result.Success(apiResponse.data)
+                } else {
+                    Result.Error(apiResponse.message ?: "Error al obtener estadísticas del usuario")
+                }
             } else {
-                Result.Error("Error al obtener ranking: ${response.message()}")
-            }
-        } catch (e: Exception) {
-            Result.Error("Error de conexión: ${e.localizedMessage}", e)
-        }
-    }
-
-    /**
-     * Obtener materiales más reciclados
-     */
-    suspend fun getMaterialesMasReciclados(): Result<List<MaterialStat>> {
-        return try {
-            val token = userPreferences.authToken.first() ?: ""
-
-            if (token.isEmpty()) {
-                return Result.Error("No hay sesión activa")
-            }
-
-            val response = springApi.getMaterialesMasReciclados("Bearer $token")
-
-            if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
-            } else {
-                Result.Error("Error al obtener materiales: ${response.message()}")
+                Result.Error("Error: ${response.code()} - ${response.message()}")
             }
         } catch (e: Exception) {
             Result.Error("Error de conexión: ${e.localizedMessage}", e)

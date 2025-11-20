@@ -1,7 +1,7 @@
 package com.miempresa.ecocoinscampus.di
 
 import com.miempresa.ecocoinscampus.data.local.UserPreferences
-import com.miempresa.ecocoinscampus.data.remote.*
+import com.miempresa.ecocoinscampus.data.remote.ApiService
 import com.miempresa.ecocoinscampus.data.repository.*
 import dagger.Module
 import dagger.Provides
@@ -16,36 +16,36 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideAuthRepository(
-        djangoApi: DjangoApiService,
+        apiService: ApiService,
         userPreferences: UserPreferences
     ): AuthRepository {
-        return AuthRepository(djangoApi, userPreferences)
+        return AuthRepository(apiService, userPreferences)
     }
 
     @Provides
     @Singleton
-    fun provideMaterialRepository(
-        djangoApi: DjangoApiService,
+    fun provideReciclajeRepository(
+        apiService: ApiService,
         userPreferences: UserPreferences
-    ): MaterialRepository {
-        return MaterialRepository(djangoApi, userPreferences)
-    }
-
-    @Provides
-    @Singleton
-    fun provideEstadisticasRepository(
-        springApi: SpringApiService,
-        userPreferences: UserPreferences
-    ): EstadisticasRepository {
-        return EstadisticasRepository(springApi, userPreferences)
+    ): ReciclajeRepository {
+        return ReciclajeRepository(apiService, userPreferences)
     }
 
     @Provides
     @Singleton
     fun provideRecompensasRepository(
-        djangoApi: DjangoApiService,
+        apiService: ApiService,
         userPreferences: UserPreferences
     ): RecompensasRepository {
-        return RecompensasRepository(djangoApi, userPreferences)
+        return RecompensasRepository(apiService, userPreferences)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEstadisticasRepository(
+        apiService: ApiService,
+        userPreferences: UserPreferences
+    ): EstadisticasRepository {
+        return EstadisticasRepository(apiService, userPreferences)
     }
 }

@@ -14,6 +14,7 @@ data class RecompensasUiState(
     val isLoading: Boolean = false,
     val recompensas: List<Recompensa> = emptyList(),
     val canjeExitoso: Boolean = false,
+    val canjeMessage: String? = null,
     val error: String? = null
 )
 
@@ -55,20 +56,29 @@ class RecompensasViewModel @Inject constructor(
         }
     }
 
-    fun canjearRecompensa(recompensaId: String) {
+    fun canjearRecompensa(
+        recompensaId: String,
+        direccionEntrega: String? = null,
+        telefonoContacto: String? = null
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, canjeExitoso = false) }
 
-            when (val result = recompensasRepository.canjearRecompensa(recompensaId)) {
+            when (val result = recompensasRepository.canjearRecompensa(
+                recompensaId,
+                direccionEntrega,
+                telefonoContacto
+            )) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            canjeExitoso = true
+                            canjeExitoso = true,
+                            canjeMessage = result.data.mensaje
                         )
                     }
 
-                    // Recargar recompensas
+                    // Recargar recompensas para actualizar stock
                     loadRecompensas()
                 }
                 is Result.Error -> {
@@ -85,7 +95,7 @@ class RecompensasViewModel @Inject constructor(
     }
 
     fun resetCanjeExitoso() {
-        _uiState.update { it.copy(canjeExitoso = false) }
+        _uiState.update { it.copy(canjeExitoso = false, canjeMessage = null) }
     }
 
     fun clearError() {

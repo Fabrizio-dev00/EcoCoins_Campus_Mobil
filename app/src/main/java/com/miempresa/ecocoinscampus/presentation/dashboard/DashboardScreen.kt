@@ -4,7 +4,6 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -69,8 +68,9 @@ fun DashboardScreen(
                 // Tarjeta de EcoCoins
                 item {
                     EcoCoinsCard(
-                        ecoCoins = uiState.user?.ecoCoins ?: 0.0,
-                        userName = uiState.user?.nombre ?: "Usuario"
+                        ecoCoins = uiState.user?.ecoCoins?.toDouble() ?: 0.0,
+                        userName = uiState.user?.nombre ?: "Usuario",
+                        nivel = getNivelNombre(uiState.user?.nivel ?: 1)
                     )
                 }
 
@@ -104,11 +104,11 @@ fun DashboardScreen(
                     }
                 }
 
-                // Estadísticas generales
-                uiState.estadisticas?.let { stats ->
+                // Estadísticas del usuario
+                uiState.user?.let { user ->
                     item {
                         Text(
-                            "Estadísticas del Campus",
+                            "Mis Estadísticas",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -125,38 +125,79 @@ fun DashboardScreen(
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                StatRow("Total reciclajes", "${user.totalReciclajes}")
+                                StatRow(
+                                    "Kg reciclados",
+                                    String.format("%.2f kg", user.totalKgReciclados)
+                                )
+                                StatRow("Nivel", getNivelNombre(user.nivel))
+                            }
+                        }
+                    }
+                }
+
+                // Estadísticas generales
+                uiState.estadisticas?.let { stats ->
+                    item {
+                        Text(
+                            "Estadísticas del Campus",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                                 StatRow("Total usuarios", "${stats.totalUsuarios}")
                                 StatRow("Total reciclajes", "${stats.totalReciclajes}")
                                 StatRow(
-                                    "EcoCoins generadas",
-                                    String.format("%.2f", stats.totalEcocoins)
+                                    "Kg reciclados",
+                                    String.format("%.2f kg", stats.totalKgReciclados)
                                 )
                             }
                         }
                     }
                 }
 
-                // Ranking
-                if (uiState.ranking.isNotEmpty()) {
+                // Últimos reciclajes
+                if (uiState.userReciclajes.isNotEmpty()) {
                     item {
                         Text(
-                            "Top Recicladores 🏆",
+                            "Últimos Reciclajes",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    items(uiState.ranking.take(5)) { user ->
-                        RankingItem(user)
+                    items(uiState.userReciclajes.take(5)) { reciclaje ->
+                        ReciclajeCard(reciclaje)
                     }
                 }
+            }
+        }
+
+        // Mostrar error si existe
+        uiState.error?.let { error ->
+            Snackbar(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(error)
             }
         }
     }
 }
 
 @Composable
-fun EcoCoinsCard(ecoCoins: Double, userName: String) {
+fun EcoCoinsCard(ecoCoins: Double, userName: String, nivel: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -183,7 +224,15 @@ fun EcoCoinsCard(ecoCoins: Double, userName: String) {
                     color = MaterialTheme.colorScheme.onPrimary
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    "Nivel $nivel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -202,7 +251,7 @@ fun EcoCoinsCard(ecoCoins: Double, userName: String) {
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                         )
                         Text(
-                            String.format("%.2f EcoCoins", ecoCoins),
+                            String.format("%.0f EcoCoins", ecoCoins),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimary
@@ -272,7 +321,7 @@ fun StatRow(label: String, value: String) {
 }
 
 @Composable
-fun RankingItem(user: com.miempresa.ecocoinscampus.data.model.UserRanking) {
+fun ReciclajeCard(reciclaje: com.miempresa.ecocoinscampus.data.model.Reciclaje) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -280,39 +329,47 @@ fun RankingItem(user: com.miempresa.ecocoinscampus.data.model.UserRanking) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        user.usuario.first().uppercase(),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
+            Column {
                 Text(
-                    user.usuario,
-                    style = MaterialTheme.typography.bodyLarge
+                    reciclaje.tipoMaterial,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    String.format("%.2f kg", reciclaje.pesoKg),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    reciclaje.fecha.take(10), // Solo la fecha
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Text(
-                String.format("%.0f coins", user.totalEcocoins),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "+${reciclaje.ecoCoinsGanadas}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "ecoCoins",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
+    }
+}
+
+fun getNivelNombre(nivel: Int): String {
+    return when (nivel) {
+        1 -> "Bronce 🥉"
+        2 -> "Plata 🥈"
+        3 -> "Oro 🥇"
+        4 -> "Platino 💎"
+        else -> "Bronce 🥉"
     }
 }

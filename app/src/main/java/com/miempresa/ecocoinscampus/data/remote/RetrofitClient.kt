@@ -9,9 +9,14 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // URLs de tus backends
-    private const val DJANGO_BASE_URL = "http://10.0.2.2:8000/api/"
-    private const val SPRING_BASE_URL = "http://10.0.2.2:8080/api/"
+    // 📱 Para dispositivo físico, usa tu IP local:
+    private const val BASE_URL = "http://10.0.2.2:8080/"
+
+    // 📱 Para dispositivo físico, usa tu IP local:
+    // private const val BASE_URL = "http://192.168.1.X:8080/"
+
+    // 🌐 Para producción:
+    // private const val BASE_URL = "https://api.ecocoinscampus.com/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -28,23 +33,13 @@ object RetrofitClient {
         .setLenient()
         .create()
 
-    // Retrofit para Django (Auth + Materiales)
-    val djangoApi: DjangoApiService by lazy {
+    // 🔥 ÚNICO CLIENTE RETROFIT PARA SPRING BOOT
+    val api: ApiService by lazy {
         Retrofit.Builder()
-            .baseUrl(DJANGO_BASE_URL)
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
-            .create(DjangoApiService::class.java)
-    }
-
-    // Retrofit para Spring Boot (Estadísticas)
-    val springApi: SpringApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(SPRING_BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-            .create(SpringApiService::class.java)
+            .create(ApiService::class.java)
     }
 }

@@ -2,13 +2,13 @@ package com.miempresa.ecocoinscampus.data.repository
 
 import com.miempresa.ecocoinscampus.data.local.UserPreferences
 import com.miempresa.ecocoinscampus.data.model.*
-import com.miempresa.ecocoinscampus.data.remote.DjangoApiService
+import com.miempresa.ecocoinscampus.data.remote.ApiService
 import com.miempresa.ecocoinscampus.utils.Result
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class RecompensasRepository @Inject constructor(
-    private val djangoApi: DjangoApiService,
+    private val apiService: ApiService,
     private val userPreferences: UserPreferences
 ) {
 
@@ -23,12 +23,18 @@ class RecompensasRepository @Inject constructor(
                 return Result.Error("No hay sesión activa")
             }
 
-            val response = djangoApi.getRecompensas("Bearer $token")
+            val response = apiService.getRecompensas("Bearer $token")
 
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                val apiResponse = response.body()!!
+
+                if (apiResponse.success && apiResponse.data != null) {
+                    Result.Success(apiResponse.data)
+                } else {
+                    Result.Error(apiResponse.message ?: "Error al obtener recompensas")
+                }
             } else {
-                Result.Error("Error al obtener recompensas: ${response.message()}")
+                Result.Error("Error: ${response.code()} - ${response.message()}")
             }
         } catch (e: Exception) {
             Result.Error("Error de conexión: ${e.localizedMessage}", e)
@@ -38,7 +44,12 @@ class RecompensasRepository @Inject constructor(
     /**
      * Canjear una recompensa
      */
-    suspend fun canjearRecompensa(recompensaId: String): Result<User> {
+    suspend fun canjearRecompensa(
+        recompensaId: String,
+        direccionEntrega: String? = null,
+        telefonoContacto: String? = null,
+        observaciones: String? = null
+    ): Result<CanjeResponse> {
         return try {
             val token = userPreferences.authToken.first() ?: ""
             val userId = userPreferences.userId.first() ?: ""
@@ -47,22 +58,61 @@ class RecompensasRepository @Inject constructor(
                 return Result.Error("No hay sesión activa")
             }
 
-            val request = CanjearRecompensaRequest(
-                usuario_id = userId,
-                recompensa_id = recompensaId
+            val request = CanjeRequest(
+                usuarioId = userId,
+                recompensaId = recompensaId,
+                direccionEntrega = direccionEntrega,
+                telefonoContacto = telefonoContacto,
+                observaciones = observaciones
             )
 
-            val response = djangoApi.canjearRecompensa("Bearer $token", request)
+            val response = apiService.canjearRecompensa("Bearer $token", request)
 
             if (response.isSuccessful && response.body() != null) {
-                val user = response.body()!!.usuario
+                val apiResponse = response.body()!!
 
-                // Actualizar ecoCoins localmente
-                userPreferences.updateEcoCoins(user.ecoCoins)
+                if (apiResponse.success && apiResponse.data != null) {
+                    val canjeResponse = apiResponse.data
 
-                Result.Success(user)
+                    // Actualizar EcoCoins localmente
+                    userPreferences.updateEcoCoins(canjeResponse.nuevoBalance.toDouble())
+
+                    Result.Success(canjeResponse)
+                } else {
+                    Result.Error(apiResponse.message ?: "Error al canjear recompensa")
+                }
             } else {
-                Result.Error("Error al canjear recompensa: ${response.message()}")
+                Result.Error("Error: ${response.code()} - ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Result.Error("Error de conexión: ${e.localizedMessage}", e)
+        }
+    }
+
+    /**
+     * Obtener canjes del usuario
+     */
+    suspend fun getMisCanjes(): Result<List<Canje>> {
+        return try {
+            val token = userPreferences.authToken.first() ?: ""
+            val userId = userPreferences.userId.first() ?: ""
+
+            if (token.isEmpty()) {
+                return Result.Error("No hay sesión activa")
+            }
+
+            val response = apiService.getCanjesByUsuario(userId, "Bearer $token")
+
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+
+                if (apiResponse.success && apiResponse.data != null) {
+                    Result.Success(apiResponse.data)
+                } else {
+                    Result.Error(apiResponse.message ?: "Error al obtener canjes")
+                }
+            } else {
+                Result.Error("Error: ${response.code()} - ${response.message()}")
             }
         } catch (e: Exception) {
             Result.Error("Error de conexión: ${e.localizedMessage}", e)

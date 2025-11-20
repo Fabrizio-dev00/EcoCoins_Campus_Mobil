@@ -2,7 +2,6 @@ package com.miempresa.ecocoinscampus.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.miempresa.ecocoinscampus.data.model.User
 import com.miempresa.ecocoinscampus.data.repository.AuthRepository
 import com.miempresa.ecocoinscampus.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,7 +11,6 @@ import javax.inject.Inject
 
 data class AuthUiState(
     val isLoading: Boolean = false,
-    val user: User? = null,
     val error: String? = null,
     val isLoggedIn: Boolean = false
 )
@@ -46,7 +44,6 @@ class AuthViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            user = result.data,
                             isLoggedIn = true,
                             error = null
                         )
@@ -74,7 +71,6 @@ class AuthViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            user = result.data,
                             isLoggedIn = true,
                             error = null
                         )

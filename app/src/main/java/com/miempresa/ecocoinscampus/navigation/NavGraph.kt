@@ -19,7 +19,9 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Auth
+        // ===================================
+        // AUTH
+        // ===================================
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = {
@@ -46,7 +48,9 @@ fun NavGraph(
             )
         }
 
-        // Dashboard
+        // ===================================
+        // DASHBOARD
+        // ===================================
         composable(Screen.Dashboard.route) {
             DashboardScreen(
                 onNavigateToMaterials = {
@@ -61,7 +65,9 @@ fun NavGraph(
             )
         }
 
-        // Materiales
+        // ===================================
+        // RECICLAJES
+        // ===================================
         composable(Screen.Materiales.route) {
             MaterialesScreen(
                 onNavigateBack = {
@@ -70,7 +76,9 @@ fun NavGraph(
             )
         }
 
-        // Recompensas
+        // ===================================
+        // RECOMPENSAS
+        // ===================================
         composable(Screen.Recompensas.route) {
             RecompensasScreen(
                 onNavigateBack = {
@@ -79,7 +87,9 @@ fun NavGraph(
             )
         }
 
-        // Perfil
+        // ===================================
+        // PERFIL
+        // ===================================
         composable(Screen.Perfil.route) {
             PerfilScreen(
                 onNavigateBack = {

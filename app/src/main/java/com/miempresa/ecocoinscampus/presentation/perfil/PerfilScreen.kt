@@ -10,16 +10,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.miempresa.ecocoinscampus.presentation.auth.AuthViewModel
+import com.miempresa.ecocoinscampus.presentation.dashboard.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
     onNavigateBack: () -> Unit,
     onLogout: () -> Unit,
-    viewModel: AuthViewModel = hiltViewModel()
+    dashboardViewModel: DashboardViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val dashboardState by dashboardViewModel.uiState.collectAsState()
+    val user = dashboardState.user
 
     Scaffold(
         topBar = {
@@ -50,13 +51,13 @@ fun PerfilScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                uiState.user?.nombre ?: "Usuario",
+                user?.nombre ?: "Usuario",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                uiState.user?.email ?: "",
+                user?.correo ?: "",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -70,12 +71,14 @@ fun PerfilScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ProfileItem("Carrera", uiState.user?.carrera ?: "")
-                    ProfileItem("Rol", uiState.user?.rol ?: "")
+                    ProfileItem("Carrera", user?.carrera ?: "")
+                    ProfileItem("Rol", user?.rol ?: "")
                     ProfileItem(
                         "EcoCoins",
-                        String.format("%.2f", uiState.user?.ecoCoins ?: 0.0)
+                        user?.ecoCoins?.toString() ?: "0"
                     )
+                    ProfileItem("Nivel", user?.nivel?.toString() ?: "1")
+                    ProfileItem("Total Reciclajes", user?.totalReciclajes?.toString() ?: "0")
                 }
             }
 
@@ -83,7 +86,6 @@ fun PerfilScreen(
 
             Button(
                 onClick = {
-                    viewModel.logout()
                     onLogout()
                 },
                 modifier = Modifier
