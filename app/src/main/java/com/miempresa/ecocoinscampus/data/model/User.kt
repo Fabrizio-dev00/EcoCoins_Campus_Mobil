@@ -84,7 +84,7 @@ data class LoginResponse(
     val nombre: String,
 
     @SerializedName("correo")
-    val correo: String,
+    val email: String,
 
     @SerializedName("rol")
     val rol: String,
