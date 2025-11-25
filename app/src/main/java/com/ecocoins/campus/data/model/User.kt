@@ -34,7 +34,10 @@ data class User(
     val totalKgReciclados: Double = 0.0,
 
     @SerializedName("estado")
-    val estado: String = "activo"
+    val estado: String = "activo",
+
+    @SerializedName("firebaseUid")
+    val firebaseUid: String? = null
 )
 
 // REQUEST MODELS

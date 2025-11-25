@@ -13,13 +13,22 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
 
+    // ⭐ AGREGAR ESTE PROVIDER
+    @Provides
+    @Singleton
+    fun provideFirebaseAuthRepository(
+        apiService: ApiService
+    ): FirebaseAuthRepository {
+        return FirebaseAuthRepository(apiService)
+    }
+
     @Provides
     @Singleton
     fun provideAuthRepository(
-        apiService: ApiService,
+        firebaseAuthRepository: FirebaseAuthRepository,
         userPreferences: UserPreferences
     ): AuthRepository {
-        return AuthRepository(apiService, userPreferences)
+        return AuthRepository(firebaseAuthRepository, userPreferences)
     }
 
     @Provides

@@ -6,53 +6,80 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // AUTH
-    @POST("api/auth/login")
-    suspend fun login(
-        @Body request: LoginRequest
-    ): Response<ApiResponse<LoginResponse>>
+    // ========================================
+    // 🔥 ENDPOINTS DE AUTENTICACIÓN FIREBASE
+    // ========================================
 
-    @POST("api/auth/register")
-    suspend fun register(
-        @Body request: RegisterRequest
-    ): Response<ApiResponse<LoginResponse>>
+    /**
+     * Sincroniza usuario de Firebase con MongoDB
+     */
+    @POST("api/auth/sync")
+    suspend fun sincronizarUsuario(
+        @Header("Authorization") authHeader: String,
+        @Body request: Map<String, String>
+    ): ApiResponse<User>
 
-    // USUARIOS
-    @GET("api/usuarios/{id}")
-    suspend fun getUsuarioById(
-        @Path("id") userId: String,
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<User>>
+    /**
+     * Obtiene el perfil del usuario autenticado
+     */
+    @GET("api/auth/perfil")
+    suspend fun obtenerPerfil(
+        @Header("Authorization") authHeader: String
+    ): ApiResponse<User>
 
-    // RECICLAJES
+    /**
+     * Health check del servicio
+     */
+    @GET("api/auth/health")
+    suspend fun healthCheck(): ApiResponse<String>
+
+    // ========================================
+    // ENDPOINTS DE RECICLAJES
+    // ========================================
+
+    /**
+     * Obtiene los reciclajes de un usuario
+     */
     @GET("api/reciclajes/usuario/{usuarioId}")
     suspend fun getReciclajesByUsuario(
         @Path("usuarioId") usuarioId: String,
-        @Header("Authorization") token: String
+        string: String
     ): Response<ApiResponse<List<Reciclaje>>>
 
+    /**
+     * Registra un nuevo reciclaje
+     */
     @POST("api/reciclajes")
     suspend fun registrarReciclaje(
-        @Header("Authorization") token: String,
+        request1: String,
         @Body request: ReciclajeRequest
     ): Response<ApiResponse<Reciclaje>>
 
-    // RECOMPENSAS
-    @GET("api/recompensas")
-    suspend fun getRecompensas(
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<Recompensa>>>
+    // ========================================
+    // ENDPOINTS DE RECOMPENSAS
+    // ========================================
 
-    // CANJES
+    /**
+     * Obtiene todas las recompensas disponibles
+     */
+    @GET("api/recompensas")
+    suspend fun getRecompensas(string: String): Response<ApiResponse<List<Recompensa>>>
+
+    /**
+     * Canjea una recompensa
+     */
     @POST("api/canjes/canjear")
     suspend fun canjearRecompensa(
-        @Header("Authorization") token: String,
+        request1: String,
         @Body request: CanjeRequest
     ): Response<ApiResponse<CanjeResponse>>
 
+    /**
+     * Obtiene los canjes de un usuario
+     */
     @GET("api/canjes/usuario/{usuarioId}")
     suspend fun getCanjesByUsuario(
         @Path("usuarioId") usuarioId: String,
-        @Header("Authorization") token: String
+        string: String
     ): Response<ApiResponse<List<Canje>>>
 }
