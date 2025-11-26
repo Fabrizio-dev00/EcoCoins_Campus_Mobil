@@ -17,7 +17,7 @@ interface ApiService {
     suspend fun sincronizarUsuario(
         @Header("Authorization") authHeader: String,
         @Body request: Map<String, String>
-    ): Response<ApiResponse<User>>  // ⭐ CAMBIO: Ahora retorna Response<>
+    ): Response<ApiResponse<User>>
 
     /**
      * Obtiene el perfil del usuario autenticado
@@ -84,4 +84,43 @@ interface ApiService {
         @Path("usuarioId") usuarioId: String,
         @Header("Authorization") token: String
     ): Response<ApiResponse<List<Canje>>>
+
+    // ========================================
+    // 🏪 ENDPOINTS DE PROFESORES Y TIENDA
+    // ========================================
+
+    /**
+     * Obtiene todos los profesores activos con sus recompensas
+     */
+    @GET("api/profesores/activos")
+    suspend fun getProfesoresActivos(
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<List<Profesor>>>
+
+    /**
+     * Obtiene un profesor específico por ID
+     */
+    @GET("api/profesores/{profesorId}")
+    suspend fun getProfesorById(
+        @Path("profesorId") profesorId: String,
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<Profesor>>
+
+    /**
+     * Canjea una recompensa de un profesor
+     */
+    @POST("api/profesores/canjear")
+    suspend fun canjearRecompensaProfesor(
+        @Header("Authorization") token: String,
+        @Body request: CanjearRecompensaProfesorRequest
+    ): Response<ApiResponse<CanjearRecompensaProfesorResponse>>
+
+    /**
+     * Obtiene el historial de canjes con profesores del usuario
+     */
+    @GET("api/profesores/historial/{usuarioId}")
+    suspend fun getHistorialCanjesProfesores(
+        @Path("usuarioId") usuarioId: String,
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<List<CanjearRecompensaProfesorResponse>>>
 }

@@ -5,10 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.ecocoins.campus.presentation.auth.*
-import com.ecocoins.campus.presentation.dashboard.DashboardScreen
-import com.ecocoins.campus.presentation.reciclajes.ReciclajesScreen
-import com.ecocoins.campus.presentation.recompensas.RecompensasScreen
-import com.ecocoins.campus.presentation.perfil.PerfilScreen
+import com.ecocoins.campus.presentation.main.MainScreen
 
 @Composable
 fun NavGraph(
@@ -19,7 +16,7 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        // AUTH
+        // AUTH - Login
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = {
@@ -33,6 +30,7 @@ fun NavGraph(
             )
         }
 
+        // AUTH - Register
         composable(Screen.Register.route) {
             RegisterScreen(
                 onNavigateToLogin = {
@@ -46,45 +44,9 @@ fun NavGraph(
             )
         }
 
-        // DASHBOARD
+        // MAIN - Dashboard con BottomNavigation
         composable(Screen.Dashboard.route) {
-            DashboardScreen(
-                onNavigateToReciclajes = {
-                    navController.navigate(Screen.Reciclajes.route)
-                },
-                onNavigateToRecompensas = {
-                    navController.navigate(Screen.Recompensas.route)
-                },
-                onNavigateToPerfil = {
-                    navController.navigate(Screen.Perfil.route)
-                }
-            )
-        }
-
-        // RECICLAJES
-        composable(Screen.Reciclajes.route) {
-            ReciclajesScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        // RECOMPENSAS
-        composable(Screen.Recompensas.route) {
-            RecompensasScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        // PERFIL
-        composable(Screen.Perfil.route) {
-            PerfilScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
+            MainScreen(
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }

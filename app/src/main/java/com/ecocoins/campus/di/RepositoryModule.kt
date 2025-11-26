@@ -26,7 +26,7 @@ object RepositoryModule {
     fun provideAuthRepository(
         firebaseAuthRepository: FirebaseAuthRepository,
         userPreferences: UserPreferences,
-        apiService: ApiService  // ⭐ AGREGAR ESTE PARÁMETRO
+        apiService: ApiService
     ): AuthRepository {
         return AuthRepository(firebaseAuthRepository, userPreferences, apiService)
     }
@@ -47,5 +47,14 @@ object RepositoryModule {
         userPreferences: UserPreferences
     ): RecompensasRepository {
         return RecompensasRepository(apiService, userPreferences)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProfesorRepository(
+        apiService: ApiService,
+        userPreferences: UserPreferences
+    ): ProfesorRepository {
+        return ProfesorRepository(apiService, userPreferences)
     }
 }
