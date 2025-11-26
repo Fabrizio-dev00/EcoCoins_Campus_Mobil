@@ -30,34 +30,3 @@ data class Canje(
     @SerializedName("fechaEntrega")
     val fechaEntrega: String? = null
 )
-
-/**
- * Request para canjear una recompensa
- */
-data class CanjeRequest(
-    @SerializedName("usuarioId")
-    val usuarioId: String,
-
-    @SerializedName("recompensaId")
-    val recompensaId: String
-)
-
-/**
- * Response al canjear una recompensa
- */
-data class CanjeResponse(
-    @SerializedName("_id")
-    val id: String,
-
-    @SerializedName("mensaje")
-    val mensaje: String,
-
-    @SerializedName("nuevoBalance")
-    val nuevoBalance: Int,
-
-    @SerializedName("recompensa")
-    val recompensa: Recompensa,
-
-    @SerializedName("fechaCanje")
-    val fechaCanje: String
-)
