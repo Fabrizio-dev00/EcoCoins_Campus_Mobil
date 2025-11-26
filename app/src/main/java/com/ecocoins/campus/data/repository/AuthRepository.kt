@@ -2,17 +2,18 @@ package com.ecocoins.campus.data.repository
 
 import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.User
+import com.ecocoins.campus.data.remote.ApiService
 import com.ecocoins.campus.utils.Result
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
     private val firebaseAuthRepository: FirebaseAuthRepository,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val apiService: ApiService  // ⭐ AGREGAR ESTE PARÁMETRO
 ) {
 
     suspend fun login(correo: String, contrasenia: String): Result<User> {
-        // ✅ Usar isSuccess/isFailure en lugar de is Success/Failure
         val result = firebaseAuthRepository.loginConEmail(correo, contrasenia)
 
         return if (result.isSuccess) {
@@ -42,7 +43,6 @@ class AuthRepository @Inject constructor(
         contrasenia: String,
         carrera: String
     ): Result<User> {
-        // ✅ Usar isSuccess/isFailure en lugar de is Success/Failure
         val result = firebaseAuthRepository.registrarConEmail(
             email = correo,
             password = contrasenia,
@@ -71,9 +71,29 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun getUserProfile(): Result<User> {
-        // Esta función ya no es necesaria con Firebase Auth
-        // porque el perfil se obtiene durante el login
-        return Result.Error("Método no implementado. Usa login() para obtener perfil.")
+        return try {
+            // Obtener token de Firebase
+            val token = firebaseAuthRepository.obtenerToken()
+                ?: return Result.Error("No hay sesión activa")
+
+            // Llamar al endpoint /api/auth/perfil del backend
+            val response = apiService.obtenerPerfil(
+                authHeader = "Bearer $token"
+            )
+
+            if (response.success && response.data != null) {
+                val user = response.data
+
+                // Actualizar datos en DataStore
+                saveUserSession(user)
+
+                Result.Success(user)
+            } else {
+                Result.Error(response.message ?: "Error al obtener perfil")
+            }
+        } catch (e: Exception) {
+            Result.Error("Error: ${e.localizedMessage}", e)
+        }
     }
 
     private suspend fun saveUserSession(user: User) {

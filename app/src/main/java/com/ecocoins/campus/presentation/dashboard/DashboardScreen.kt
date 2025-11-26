@@ -3,10 +3,12 @@ package com.ecocoins.campus.presentation.dashboard
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,9 +21,22 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ecocoins.campus.data.model.Reciclaje
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+// Colores personalizados de EcoCoins Campus
+private val EcoGreenPrimary = Color(0xFF2D7A3E)
+private val EcoGreenLight = Color(0xFF81C784)
+private val EcoOrange = Color(0xFFFF9800)
+private val EcoOrangeLight = Color(0xFFFFB74D)
+private val StatusCompleted = Color(0xFF4CAF50)
+private val StatusPending = Color(0xFFFFB74D)
+private val BackgroundLight = Color(0xFFF5F5F5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +47,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Animación de escala para el refresh
     var isRefreshing by remember { mutableStateOf(false) }
@@ -43,49 +59,24 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Eco,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            "EcoCoinsCampus",
-                            fontWeight = FontWeight.Bold
-                        )
+            DashboardTopBar(
+                ecoCoins = uiState.user?.ecoCoins ?: 0,
+                onRefreshClick = {
+                    isRefreshing = true
+                    viewModel.loadDashboardData()
+                    scope.launch {
+                        delay(500)
+                        isRefreshing = false
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
-                        isRefreshing = true
-                        viewModel.loadDashboardData()
-                        kotlinx.coroutines.GlobalScope.launch {
-                            kotlinx.coroutines.delay(500)
-                            isRefreshing = false
-                        }
-                    }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Actualizar",
-                            modifier = Modifier.scale(if (isRefreshing) 1.2f else 1f)
-                        )
-                    }
-                    IconButton(onClick = onNavigateToPerfil) {
-                        Icon(Icons.Default.Person, contentDescription = "Perfil")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                onNotificationsClick = { /* TODO */ },
+                isRefreshing = isRefreshing
             )
-        }
+        },
+        containerColor = BackgroundLight
     ) { padding ->
-        if (uiState.isLoading) {
+        if (uiState.isLoading && uiState.user == null) {
+            // Loading inicial
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -96,9 +87,9 @@ fun DashboardScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = EcoGreenPrimary)
                     Text(
-                        "Cargando...",
+                        "Cargando tu información...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -113,65 +104,57 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Tarjeta de EcoCoins con animación
+                // Saludo personalizado
                 item {
                     AnimatedVisibility(
                         visible = true,
-                        enter = slideInVertically(
-                            initialOffsetY = { -it }
-                        ) + fadeIn()
+                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
                     ) {
-                        EcoCoinsCard(
-                            ecoCoins = uiState.user?.ecoCoins?.toDouble() ?: 0.0,
-                            userName = uiState.user?.nombre ?: "Usuario",
-                            nivel = getNivelNombre(uiState.user?.nivel ?: 1)
-                        )
+                        GreetingSection(userName = uiState.user?.nombre ?: "Usuario")
                     }
                 }
 
-                // Título de acciones rápidas
+                // Botón principal de reciclaje
                 item {
                     AnimatedVisibility(
                         visible = true,
-                        enter = slideInHorizontally(
-                            initialOffsetX = { -it }
-                        ) + fadeIn()
+                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
                     ) {
-                        Text(
-                            "Acciones rápidas",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        RecycleNowCard(onClick = onNavigateToReciclajes)
                     }
                 }
 
-                // Botones de acciones
+                // Acciones rápidas
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn() + expandVertically()
                     ) {
-                        var delay = 0
-                        listOf(
-                            Triple("Reciclar", Icons.Default.Recycling, onNavigateToReciclajes),
-                            Triple("Canjear", Icons.Default.Redeem, onNavigateToRecompensas)
-                        ).forEach { (title, icon, onClick) ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = slideInHorizontally(
-                                    initialOffsetX = { -it },
-                                    animationSpec = tween(300, delay)
-                                ) + fadeIn(animationSpec = tween(300, delay))
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                "Acciones rápidas",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = EcoGreenPrimary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 QuickActionCard(
-                                    title = title,
-                                    icon = icon,
-                                    onClick = onClick,
+                                    title = "Canjear",
+                                    icon = Icons.Default.Redeem,
+                                    onClick = onNavigateToRecompensas,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                QuickActionCard(
+                                    title = "Mi Perfil",
+                                    icon = Icons.Default.Person,
+                                    onClick = onNavigateToPerfil,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
-                            delay += 100
                         }
                     }
                 }
@@ -181,81 +164,49 @@ fun DashboardScreen(
                     item {
                         AnimatedVisibility(
                             visible = true,
-                            enter = slideInHorizontally(
-                                initialOffsetX = { it }
-                            ) + fadeIn()
+                            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
                         ) {
-                            Text(
-                                "Mis Estadísticas",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    item {
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = scaleIn() + fadeIn()
-                        ) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    "Mis Estadísticas",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EcoGreenPrimary
                                 )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    StatRow(
-                                        "Total reciclajes",
-                                        "${user.totalReciclajes}",
-                                        Icons.Default.Recycling
-                                    )
-                                    StatRow(
-                                        "Kg reciclados",
-                                        String.format("%.2f kg", user.totalKgReciclados),
-                                        Icons.Default.Scale
-                                    )
-                                    StatRow(
-                                        "Nivel",
-                                        getNivelNombre(user.nivel),
-                                        Icons.Default.EmojiEvents
-                                    )
-                                }
+
+                                StatsCard(
+                                    totalReciclajes = user.totalReciclajes,
+                                    totalKg = user.totalKgReciclados,
+                                    nivel = user.nivel
+                                )
                             }
                         }
                     }
                 }
 
-                // Últimos reciclajes
-                if (uiState.reciclajes.isNotEmpty()) {
-                    item {
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = slideInHorizontally(
-                                initialOffsetX = { -it }
-                            ) + fadeIn()
-                        ) {
-                            Text(
-                                "Últimos Reciclajes",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                // Actividades recientes
+                item {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                    ) {
+                        RecentActivitiesHeader(
+                            onVerTodoClick = onNavigateToReciclajes
+                        )
                     }
+                }
 
+                if (uiState.reciclajes.isEmpty()) {
+                    item {
+                        EmptyActivitiesCard()
+                    }
+                } else {
                     items(uiState.reciclajes.take(5)) { reciclaje ->
                         AnimatedVisibility(
                             visible = true,
-                            enter = slideInHorizontally(
-                                initialOffsetX = { it }
-                            ) + fadeIn()
+                            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
                         ) {
-                            ReciclajeCard(reciclaje)
+                            ReciclajeCardImproved(reciclaje)
                         }
                     }
                 }
@@ -272,22 +223,19 @@ fun DashboardScreen(
             ) {
                 AnimatedVisibility(
                     visible = true,
-                    enter = slideInVertically(
-                        initialOffsetY = { it }
-                    ) + fadeIn(),
-                    exit = slideOutVertically(
-                        targetOffsetY = { it }
-                    ) + fadeOut()
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
                         action = {
                             TextButton(onClick = { viewModel.clearError() }) {
-                                Text("OK")
+                                Text("OK", color = MaterialTheme.colorScheme.error)
                             }
                         }
                     ) {
-                        Text(error)
+                        Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
             }
@@ -295,99 +243,162 @@ fun DashboardScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EcoCoinsCard(ecoCoins: Double, userName: String, nivel: String) {
-    // Animación de brillo
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmer by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer"
+fun DashboardTopBar(
+    ecoCoins: Int,
+    onRefreshClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    isRefreshing: Boolean
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (isRefreshing) 360f else 0f,
+        animationSpec = tween(500),
+        label = "rotation"
+    )
+
+    TopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "EcoCoins Campus",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = EcoGreenPrimary
+                )
+            }
+        },
+        actions = {
+            // EcoCoins badge
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = EcoOrangeLight.copy(alpha = 0.2f),
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Paid,
+                        contentDescription = "EcoCoins",
+                        tint = EcoOrange,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = ecoCoins.toString(),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EcoOrange
+                    )
+                }
+            }
+
+            // Notifications icon
+            IconButton(onClick = onNotificationsClick) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = "Notificaciones"
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.White
+        )
+    )
+}
+
+@Composable
+fun GreetingSection(userName: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "¡Hola, $userName!",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF212121)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        val currentTime = remember {
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        }
+
+        Text(
+            text = "Última actualización: $currentTime",
+            fontSize = 14.sp,
+            color = Color(0xFF757575)
+        )
+    }
+}
+
+@Composable
+fun RecycleNowCard(onClick: () -> Unit) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "press"
     )
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .clickable {
+                isPressed = true
+                kotlinx.coroutines.GlobalScope.launch {
+                    delay(100)
+                    isPressed = false
+                    onClick()
+                }
+            },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = EcoGreenPrimary
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
-                            MaterialTheme.colorScheme.tertiary
-                        ),
-                        startX = shimmer * 1000
-                    )
-                )
-                .padding(24.dp)
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.WavingHand,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Text(
-                        "Hola, $userName",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "¡Recicla Ahora!",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Nivel $nivel",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    text = "Gana EcoCoins por cada material reciclado",
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.9f)
                 )
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Paid,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            "Tu saldo",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                        )
-                        Text(
-                            String.format("%.0f EcoCoins", ecoCoins),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+            Surface(
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.2f),
+                modifier = Modifier.size(60.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Recycling,
+                        contentDescription = "Reciclar",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         }
@@ -412,51 +423,95 @@ fun QuickActionCard(
         onClick = {
             isPressed = true
             kotlinx.coroutines.GlobalScope.launch {
-                kotlinx.coroutines.delay(100)
+                delay(100)
                 isPressed = false
                 onClick()
             }
         },
         modifier = modifier.scale(scale),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
+            Surface(
+                shape = CircleShape,
+                color = EcoGreenLight.copy(alpha = 0.2f),
+                modifier = Modifier.size(48.dp)
             ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = EcoGreenPrimary
+                    )
+                }
             }
 
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF212121)
             )
         }
     }
 }
 
 @Composable
-fun StatRow(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+fun StatsCard(
+    totalReciclajes: Int,
+    totalKg: Double,
+    nivel: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StatRow(
+                label = "Total reciclajes",
+                value = "$totalReciclajes",
+                icon = Icons.Default.Recycling
+            )
+            Divider(color = Color(0xFFE0E0E0))
+            StatRow(
+                label = "Kg reciclados",
+                value = String.format("%.2f kg", totalKg),
+                icon = Icons.Default.Scale
+            )
+            Divider(color = Color(0xFFE0E0E0))
+            StatRow(
+                label = "Nivel",
+                value = getNivelNombre(nivel),
+                icon = Icons.Default.EmojiEvents
+            )
+        }
+    }
+}
+
+@Composable
+fun StatRow(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -470,27 +525,55 @@ fun StatRow(label: String, value: String, icon: androidx.compose.ui.graphics.vec
                 icon,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                tint = EcoGreenPrimary
             )
             Text(
                 label,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = Color(0xFF212121)
             )
         }
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSecondaryContainer
+            color = EcoGreenPrimary
         )
     }
 }
 
 @Composable
-fun ReciclajeCard(reciclaje: Reciclaje) {
+fun RecentActivitiesHeader(onVerTodoClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Actividades Recientes",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = EcoGreenPrimary
+        )
+
+        TextButton(onClick = onVerTodoClick) {
+            Text(
+                text = "Ver Todo",
+                color = EcoGreenPrimary,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ReciclajeCardImproved(reciclaje: Reciclaje) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -500,57 +583,143 @@ fun ReciclajeCard(reciclaje: Reciclaje) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Ícono del material
+            Surface(
+                shape = CircleShape,
+                color = getMaterialColor(reciclaje.tipoMaterial).copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Recycling,
+                        contentDescription = reciclaje.tipoMaterial,
+                        tint = getMaterialColor(reciclaje.tipoMaterial),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Información
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = reciclaje.tipoMaterial,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212121)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = formatDate(reciclaje.fecha),
+                    fontSize = 12.sp,
+                    color = Color(0xFF757575)
+                )
+            }
+
+            // EcoCoins y estado
+            Column(horizontalAlignment = Alignment.End) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        Icons.Default.Recycling,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        imageVector = Icons.Default.Paid,
+                        contentDescription = "EcoCoins",
+                        tint = EcoOrange,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "+${reciclaje.ecoCoinsGanadas}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EcoOrange
                     )
                 }
 
-                Column {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = StatusCompleted.copy(alpha = 0.1f)
+                ) {
                     Text(
-                        reciclaje.tipoMaterial,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        String.format("%.2f kg", reciclaje.pesoKg),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        reciclaje.fecha.take(10),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "COMPLETADO",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StatusCompleted,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "+${reciclaje.ecoCoinsGanadas}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    "coins",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
+    }
+}
+
+@Composable
+fun EmptyActivitiesCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = "Sin actividades",
+                tint = Color(0xFF757575),
+                modifier = Modifier.size(64.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Sin actividades recientes",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF212121)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "¡Comienza a reciclar para ganar EcoCoins!",
+                fontSize = 14.sp,
+                color = Color(0xFF757575)
+            )
+        }
+    }
+}
+
+// Helper functions
+fun getMaterialColor(material: String): Color {
+    return when (material.lowercase()) {
+        "plástico", "botella de plástico" -> Color(0xFF2196F3)
+        "papel", "papel de oficina" -> Color(0xFF795548)
+        "vidrio", "vidrio transparente" -> Color(0xFF4CAF50)
+        "metal", "lata de aluminio" -> Color(0xFF607D8B)
+        "cartón", "cartón corrugado" -> Color(0xFF795548)
+        else -> EcoGreenPrimary
+    }
+}
+
+fun formatDate(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        date?.let { outputFormat.format(it) } ?: dateString.take(10)
+    } catch (e: Exception) {
+        dateString.take(10)
     }
 }
 

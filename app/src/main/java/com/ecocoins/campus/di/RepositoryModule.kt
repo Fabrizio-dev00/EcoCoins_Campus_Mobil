@@ -13,7 +13,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
 
-    // ⭐ AGREGAR ESTE PROVIDER
     @Provides
     @Singleton
     fun provideFirebaseAuthRepository(
@@ -26,9 +25,10 @@ object RepositoryModule {
     @Singleton
     fun provideAuthRepository(
         firebaseAuthRepository: FirebaseAuthRepository,
-        userPreferences: UserPreferences
+        userPreferences: UserPreferences,
+        apiService: ApiService  // ⭐ AGREGAR ESTE PARÁMETRO
     ): AuthRepository {
-        return AuthRepository(firebaseAuthRepository, userPreferences)
+        return AuthRepository(firebaseAuthRepository, userPreferences, apiService)
     }
 
     @Provides

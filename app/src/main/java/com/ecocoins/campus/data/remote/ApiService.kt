@@ -17,7 +17,7 @@ interface ApiService {
     suspend fun sincronizarUsuario(
         @Header("Authorization") authHeader: String,
         @Body request: Map<String, String>
-    ): ApiResponse<User>
+    ): Response<ApiResponse<User>>  // ⭐ CAMBIO: Ahora retorna Response<>
 
     /**
      * Obtiene el perfil del usuario autenticado
@@ -43,7 +43,7 @@ interface ApiService {
     @GET("api/reciclajes/usuario/{usuarioId}")
     suspend fun getReciclajesByUsuario(
         @Path("usuarioId") usuarioId: String,
-        string: String
+        @Header("Authorization") token: String
     ): Response<ApiResponse<List<Reciclaje>>>
 
     /**
@@ -51,7 +51,7 @@ interface ApiService {
      */
     @POST("api/reciclajes")
     suspend fun registrarReciclaje(
-        request1: String,
+        @Header("Authorization") token: String,
         @Body request: ReciclajeRequest
     ): Response<ApiResponse<Reciclaje>>
 
@@ -63,14 +63,16 @@ interface ApiService {
      * Obtiene todas las recompensas disponibles
      */
     @GET("api/recompensas")
-    suspend fun getRecompensas(string: String): Response<ApiResponse<List<Recompensa>>>
+    suspend fun getRecompensas(
+        @Header("Authorization") token: String
+    ): Response<ApiResponse<List<Recompensa>>>
 
     /**
      * Canjea una recompensa
      */
     @POST("api/canjes/canjear")
     suspend fun canjearRecompensa(
-        request1: String,
+        @Header("Authorization") token: String,
         @Body request: CanjeRequest
     ): Response<ApiResponse<CanjeResponse>>
 
@@ -80,6 +82,6 @@ interface ApiService {
     @GET("api/canjes/usuario/{usuarioId}")
     suspend fun getCanjesByUsuario(
         @Path("usuarioId") usuarioId: String,
-        string: String
+        @Header("Authorization") token: String
     ): Response<ApiResponse<List<Canje>>>
 }
