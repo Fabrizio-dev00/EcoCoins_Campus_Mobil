@@ -41,6 +41,9 @@ private val BackgroundLight = Color(0xFFF5F5F5)
 @Composable
 fun PerfilScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToHistorialReciclajes: () -> Unit,
+    onNavigateToMisRecompensas: () -> Unit,
+    onNavigateToConfiguracion: () -> Unit,
     onLogout: () -> Unit,
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
@@ -138,10 +141,12 @@ fun PerfilScreen(
                             )
 
                             PerfilOptionsCard(
-                                onEditProfile = { /* TODO */ },
-                                onHistorialReciclajes = { /* TODO: Navegar */ },
-                                onMisRecompensas = { /* TODO: Navegar */ },
-                                onConfiguracion = { /* TODO */ }
+                                onEditProfile = {
+                                    // TODO: Implementar edición de perfil
+                                },
+                                onHistorialReciclajes = onNavigateToHistorialReciclajes,
+                                onMisRecompensas = onNavigateToMisRecompensas,
+                                onConfiguracion = onNavigateToConfiguracion
                             )
                         }
                     }

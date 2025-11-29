@@ -26,6 +26,17 @@ import com.ecocoins.campus.presentation.dashboard.DashboardScreen
 import com.ecocoins.campus.presentation.perfil.PerfilScreen
 import com.ecocoins.campus.presentation.scanner.ScannerFlow
 import com.ecocoins.campus.presentation.store.StoreScreen
+import com.ecocoins.campus.presentation.history.ReciclajesHistoryScreen
+import com.ecocoins.campus.presentation.history.CanjesHistoryScreen
+import com.ecocoins.campus.presentation.settings.SettingsScreen
+import com.ecocoins.campus.presentation.ranking.RankingScreen
+import com.ecocoins.campus.presentation.logros.LogrosScreen
+import com.ecocoins.campus.presentation.estadisticas.EstadisticasScreen
+import com.ecocoins.campus.presentation.notificaciones.NotificacionesScreen
+import com.ecocoins.campus.presentation.referidos.ReferidosScreen
+import com.ecocoins.campus.presentation.mapa.MapaPuntosScreen
+import com.ecocoins.campus.presentation.educacion.EducacionScreen
+import com.ecocoins.campus.presentation.soporte.SoporteScreen
 
 // Colores personalizados
 private val EcoGreenPrimary = Color(0xFF2D7A3E)
@@ -74,6 +85,30 @@ fun NavigationHost(
                 },
                 onNavigateToPerfil = {
                     navController.navigate(BottomNavItem.Profile.route)
+                },
+                onNavigateToRanking = {
+                    navController.navigate("ranking")
+                },
+                onNavigateToLogros = {
+                    navController.navigate("logros")
+                },
+                onNavigateToEstadisticas = {
+                    navController.navigate("estadisticas")
+                },
+                onNavigateToNotificaciones = {
+                    navController.navigate("notificaciones")
+                },
+                onNavigateToReferidos = {
+                    navController.navigate("referidos")
+                },
+                onNavigateToMapa = {
+                    navController.navigate("mapa")
+                },
+                onNavigateToEducacion = {
+                    navController.navigate("educacion")
+                },
+                onNavigateToSoporte = {
+                    navController.navigate("soporte")
                 }
             )
         }
@@ -84,7 +119,6 @@ fun NavigationHost(
                     navController.popBackStack()
                 },
                 onComplete = {
-                    // Volver al home después de completar el reciclaje
                     navController.navigate(BottomNavItem.Home.route) {
                         popUpTo(BottomNavItem.Home.route) { inclusive = true }
                     }
@@ -105,7 +139,98 @@ fun NavigationHost(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
+                onNavigateToHistorialReciclajes = {
+                    navController.navigate("reciclajes_history")
+                },
+                onNavigateToMisRecompensas = {
+                    navController.navigate("canjes_history")
+                },
+                onNavigateToConfiguracion = {
+                    navController.navigate("settings")
+                },
                 onLogout = onLogout
+            )
+        }
+
+        // ===== RUTAS FASE 1 =====
+
+        composable("reciclajes_history") {
+            ReciclajesHistoryScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("canjes_history") {
+            CanjesHistoryScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("settings") {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEditProfile = { /* TODO */ },
+                onNavigateToChangePassword = { /* TODO */ },
+                onNavigateToNotifications = {
+                    navController.navigate("notificaciones")
+                },
+                onNavigateToPrivacy = { /* TODO */ },
+                onNavigateToAbout = { /* TODO */ },
+                onLogout = onLogout
+            )
+        }
+
+        // ===== RUTAS FASE 2 - GAMIFICACIÓN =====
+
+        composable("ranking") {
+            RankingScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("logros") {
+            LogrosScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("estadisticas") {
+            EstadisticasScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ===== RUTAS FASE 3 - SOCIAL Y COMUNIDAD =====
+
+        composable("notificaciones") {
+            NotificacionesScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("referidos") {
+            ReferidosScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("mapa") {
+            MapaPuntosScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ===== RUTAS FASE 4 - EDUCACIÓN Y SOPORTE =====
+
+        composable("educacion") {
+            EducacionScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("soporte") {
+            SoporteScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
@@ -149,7 +274,6 @@ fun BottomNavigationBar(navController: NavHostController) {
                 onClick = {
                     if (currentRoute != item.route) {
                         navController.navigate(item.route) {
-                            // Evitar múltiples copias del mismo destino
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
@@ -175,7 +299,6 @@ fun BottomNavIcon(
     item: BottomNavItem,
     isSelected: Boolean
 ) {
-    // Animación de escala
     val scale by animateFloatAsState(
         targetValue = if (isSelected) 1.2f else 1f,
         animationSpec = spring(
@@ -189,7 +312,6 @@ fun BottomNavIcon(
         modifier = Modifier.scale(scale),
         contentAlignment = Alignment.Center
     ) {
-        // Círculo de fondo animado cuando está seleccionado
         AnimatedVisibility(
             visible = isSelected,
             enter = scaleIn() + fadeIn(),
@@ -210,7 +332,6 @@ fun BottomNavIcon(
     }
 }
 
-// Sealed class para los items del Bottom Navigation
 sealed class BottomNavItem(
     val route: String,
     val title: String,

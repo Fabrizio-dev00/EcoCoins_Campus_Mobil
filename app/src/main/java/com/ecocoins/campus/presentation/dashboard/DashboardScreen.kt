@@ -44,6 +44,14 @@ fun DashboardScreen(
     onNavigateToReciclajes: () -> Unit,
     onNavigateToRecompensas: () -> Unit,
     onNavigateToPerfil: () -> Unit,
+    onNavigateToRanking: () -> Unit,
+    onNavigateToLogros: () -> Unit,
+    onNavigateToEstadisticas: () -> Unit,
+    onNavigateToNotificaciones: () -> Unit,
+    onNavigateToReferidos: () -> Unit,
+    onNavigateToMapa: () -> Unit,
+    onNavigateToEducacion: () -> Unit,
+    onNavigateToSoporte: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -69,7 +77,7 @@ fun DashboardScreen(
                         isRefreshing = false
                     }
                 },
-                onNotificationsClick = { /* TODO */ },
+                onNotificationsClick = onNavigateToNotificaciones,
                 isRefreshing = isRefreshing
             )
         },
@@ -159,6 +167,133 @@ fun DashboardScreen(
                     }
                 }
 
+                // ===== SECCIÓN GAMIFICACIÓN - FASE 2 =====
+                item {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                "Gamificación 🎮",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = EcoGreenPrimary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                GamificationCard(
+                                    title = "Ranking",
+                                    icon = "🏆",
+                                    description = "Top usuarios",
+                                    onClick = onNavigateToRanking,
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFFFFD700)
+                                )
+                                GamificationCard(
+                                    title = "Logros",
+                                    icon = "🎖️",
+                                    description = "Tus logros",
+                                    onClick = onNavigateToLogros,
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFF9C27B0)
+                                )
+                            }
+
+                            GamificationCard(
+                                title = "Estadísticas Detalladas",
+                                icon = "📊",
+                                description = "Análisis completo de tu impacto",
+                                onClick = onNavigateToEstadisticas,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Color(0xFF2196F3),
+                                isWide = true
+                            )
+                        }
+                    }
+                }
+
+                // ===== SECCIÓN COMUNIDAD - FASE 3 =====
+                item {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                "Comunidad 🌍",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = EcoGreenPrimary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                GamificationCard(
+                                    title = "Referidos",
+                                    icon = "👥",
+                                    description = "Invita amigos",
+                                    onClick = onNavigateToReferidos,
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFF4CAF50)
+                                )
+                                GamificationCard(
+                                    title = "Mapa",
+                                    icon = "🗺️",
+                                    description = "Puntos cerca",
+                                    onClick = onNavigateToMapa,
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFF00BCD4)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ===== SECCIÓN APRENDIZAJE Y AYUDA - FASE 4 =====
+                item {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                "Aprendizaje y Ayuda 📚",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = EcoGreenPrimary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                GamificationCard(
+                                    title = "Educación",
+                                    icon = "📖",
+                                    description = "Aprende más",
+                                    onClick = onNavigateToEducacion,
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFFFF5722)
+                                )
+                                GamificationCard(
+                                    title = "Soporte",
+                                    icon = "🎧",
+                                    description = "¿Necesitas ayuda?",
+                                    onClick = onNavigateToSoporte,
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFF673AB7)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Estadísticas del usuario
                 uiState.user?.let { user ->
                     item {
@@ -209,6 +344,11 @@ fun DashboardScreen(
                             ReciclajeCardImproved(reciclaje)
                         }
                     }
+                }
+
+                // Espaciado final
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -463,6 +603,120 @@ fun QuickActionCard(
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF212121)
             )
+        }
+    }
+}
+
+// ===== GAMIFICATION CARD =====
+@Composable
+fun GamificationCard(
+    title: String,
+    icon: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    color: Color,
+    isWide: Boolean = false
+) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "press"
+    )
+
+    Card(
+        onClick = {
+            isPressed = true
+            kotlinx.coroutines.GlobalScope.launch {
+                delay(100)
+                isPressed = false
+                onClick()
+            }
+        },
+        modifier = modifier.scale(scale),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        if (isWide) {
+            // Layout horizontal para card ancha
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = color.copy(alpha = 0.2f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = icon,
+                            fontSize = 24.sp
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        title,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF212121)
+                    )
+                    Text(
+                        description,
+                        fontSize = 12.sp,
+                        color = Color(0xFF757575)
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF9E9E9E)
+                )
+            }
+        } else {
+            // Layout vertical para cards pequeñas
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = color.copy(alpha = 0.2f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = icon,
+                            fontSize = 24.sp
+                        )
+                    }
+                }
+
+                Text(
+                    title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF212121)
+                )
+                Text(
+                    description,
+                    fontSize = 11.sp,
+                    color = Color(0xFF757575)
+                )
+            }
         }
     }
 }

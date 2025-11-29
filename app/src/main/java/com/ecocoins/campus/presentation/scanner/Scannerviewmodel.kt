@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.local.UserPreferences
+import com.ecocoins.campus.data.model.ValidarIARequest
+import com.ecocoins.campus.data.remote.ApiService
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -14,18 +16,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
 class ScannerViewModel @Inject constructor(
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val apiService: ApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScannerUiState())
@@ -34,17 +33,8 @@ class ScannerViewModel @Inject constructor(
     private val _validationState = MutableStateFlow<ValidationState>(ValidationState.Validating)
     val validationState: StateFlow<ValidationState> = _validationState.asStateFlow()
 
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .build()
-
-    // ⭐ IMPORTANTE: Reemplazar con tu API Key de Claude
-    private val CLAUDE_API_KEY = "tu_claude_api_key_aqui"
-
     /**
-     * Valida la foto del material con la API de Claude
+     * Valida la foto del material con el backend (Gemini AI)
      */
     fun validateWithAI(
         photoFile: File,
@@ -54,9 +44,29 @@ class ScannerViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _validationState.value = ValidationState.Validating
-                Log.d("ScannerVM", "🤖 Iniciando validación con IA...")
+                Log.d("ScannerVM", "🤖 Iniciando validación con backend Gemini...")
                 Log.d("ScannerVM", "   Material esperado: ${material.nombre}")
                 Log.d("ScannerVM", "   QR Code: $qrCode")
+
+                // Obtener usuario ID
+                val userId = getCurrentUserId()
+                if (userId == null) {
+                    Log.e("ScannerVM", "❌ Usuario no autenticado")
+                    _validationState.value = ValidationState.Error(
+                        mensaje = "Debes iniciar sesión para validar materiales"
+                    )
+                    return@launch
+                }
+
+                // Obtener token de Firebase
+                val token = getAuthToken()
+                if (token == null) {
+                    Log.e("ScannerVM", "❌ No se pudo obtener token")
+                    _validationState.value = ValidationState.Error(
+                        mensaje = "Error de autenticación. Intenta iniciar sesión nuevamente"
+                    )
+                    return@launch
+                }
 
                 // Convertir imagen a base64
                 val imageBase64 = withContext(Dispatchers.IO) {
@@ -64,161 +74,82 @@ class ScannerViewModel @Inject constructor(
                     Base64.encodeToString(bytes, Base64.NO_WRAP)
                 }
 
-                // Llamar a Claude API
-                val aiResponse = callClaudeAPI(imageBase64, material)
+                Log.d("ScannerVM", "📸 Imagen convertida a base64 (${imageBase64.length} caracteres)")
 
-                Log.d("ScannerVM", "✅ Respuesta de IA recibida")
-                Log.d("ScannerVM", "   Es válido: ${aiResponse.esValido}")
-                Log.d("ScannerVM", "   Confianza: ${aiResponse.confianza}%")
+                // Crear request
+                val request = ValidarIARequest(
+                    usuarioId = userId,
+                    tipoMaterial = material.nombre.uppercase(),
+                    codigoQR = qrCode,
+                    imagenBase64 = imageBase64
+                )
 
-                if (aiResponse.esValido) {
-                    // Material validado correctamente
-                    val ecoCoinsGanados = calcularEcoCoins(material, aiResponse.confianza)
+                // Llamar al backend
+                Log.d("ScannerVM", "📡 Llamando al backend...")
+                val response = apiService.validarMaterialConIA("Bearer $token", request)
 
-                    _validationState.value = ValidationState.Success(
-                        ecoCoinsGanados = ecoCoinsGanados,
-                        mensaje = aiResponse.explicacion
-                    )
+                Log.d("ScannerVM", "📡 Response Code: ${response.code()}")
+                Log.d("ScannerVM", "📡 Response Body: ${response.body()}")
 
-                    // TODO: Registrar reciclaje en el backend
-                    // Por ahora solo mostramos el éxito
-                    Log.d("ScannerVM", "💾 Reciclaje validado: +$ecoCoinsGanados EcoCoins")
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+
+                    if (apiResponse.success && apiResponse.data != null) {
+                        val data = apiResponse.data
+
+                        if (data.validado) {
+                            // Material validado correctamente
+                            Log.d("ScannerVM", "✅ Material validado: +${data.ecoCoinsGanados} EcoCoins")
+
+                            _validationState.value = ValidationState.Success(
+                                ecoCoinsGanados = data.ecoCoinsGanados,
+                                mensaje = data.mensaje
+                            )
+
+                            // Actualizar EcoCoins localmente
+                            val currentCoins = userPreferences.ecoCoins.firstOrNull() ?: 0.0
+                            userPreferences.updateEcoCoins(currentCoins + data.ecoCoinsGanados)
+
+                        } else {
+                            // Material rechazado
+                            Log.d("ScannerVM", "❌ Material rechazado: ${data.razon}")
+
+                            _validationState.value = ValidationState.Rejected(
+                                razon = data.razon ?: "El material no coincide con el tipo seleccionado",
+                                materialDetectado = data.materialDetectado
+                            )
+                        }
+                    } else {
+                        throw Exception(apiResponse.message ?: "Error en la respuesta del servidor")
+                    }
                 } else {
-                    // Material rechazado
-                    _validationState.value = ValidationState.Rejected(
-                        razon = aiResponse.explicacion,
-                        materialDetectado = aiResponse.materialDetectado
-                    )
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("ScannerVM", "❌ Error HTTP ${response.code()}: $errorBody")
+                    throw Exception("Error del servidor: ${response.code()}")
                 }
+
             } catch (e: Exception) {
                 Log.e("ScannerVM", "❌ Error en validación con IA", e)
                 _validationState.value = ValidationState.Error(
-                    mensaje = "Error al validar con IA: ${e.message}"
+                    mensaje = "Error al validar: ${e.localizedMessage}"
                 )
             }
         }
     }
 
     /**
-     * Llama a la API de Claude para validar la imagen
+     * Obtiene el token de autenticación de Firebase
      */
-    private suspend fun callClaudeAPI(
-        imageBase64: String,
-        material: TipoMaterial
-    ): AIValidationResponse = withContext(Dispatchers.IO) {
+    private suspend fun getAuthToken(): String? = withContext(Dispatchers.IO) {
         try {
-            val prompt = """
-                Analiza esta imagen y determina si el material que se muestra corresponde a ${material.nombre}.
-                
-                Criterios de validación:
-                ${material.ejemplos.joinToString("\n") { "- $it" }}
-                
-                Responde ÚNICAMENTE con un JSON en este formato exacto:
-                {
-                    "es_valido": true o false,
-                    "confianza": número entre 0-100,
-                    "material_detectado": "nombre del material que ves",
-                    "explicacion": "breve explicación de tu decisión (máximo 2 líneas)"
-                }
-                
-                IMPORTANTE: 
-                - Si es claramente ${material.nombre}, es_valido = true
-                - Si no estás seguro o es otro material, es_valido = false
-                - Sé estricto pero justo en tu evaluación
-            """.trimIndent()
-
-            val requestBody = JSONObject().apply {
-                put("model", "claude-3-5-sonnet-20241022")
-                put("max_tokens", 300)
-                put("messages", JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("role", "user")
-                        put("content", JSONArray().apply {
-                            put(JSONObject().apply {
-                                put("type", "image")
-                                put("source", JSONObject().apply {
-                                    put("type", "base64")
-                                    put("media_type", "image/jpeg")
-                                    put("data", imageBase64)
-                                })
-                            })
-                            put(JSONObject().apply {
-                                put("type", "text")
-                                put("text", prompt)
-                            })
-                        })
-                    })
-                })
-            }
-
-            val request = Request.Builder()
-                .url("https://api.anthropic.com/v1/messages")
-                .addHeader("x-api-key", CLAUDE_API_KEY)
-                .addHeader("anthropic-version", "2023-06-01")
-                .addHeader("content-type", "application/json")
-                .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-
-            val response = okHttpClient.newCall(request).execute()
-            val responseBody = response.body?.string()
-
-            Log.d("ScannerVM", "📡 Claude API Response Code: ${response.code}")
-            Log.d("ScannerVM", "📡 Claude API Response: $responseBody")
-
-            if (!response.isSuccessful) {
-                throw Exception("Error en API de Claude: ${response.code} - $responseBody")
-            }
-
-            // Parsear respuesta de Claude
-            val jsonResponse = JSONObject(responseBody ?: "{}")
-            val content = jsonResponse.getJSONArray("content")
-            val textContent = content.getJSONObject(0).getString("text")
-
-            // Extraer el JSON de la respuesta de Claude
-            val aiJson = extractJSON(textContent)
-
-            AIValidationResponse(
-                esValido = aiJson.getBoolean("es_valido"),
-                confianza = aiJson.getInt("confianza"),
-                materialDetectado = aiJson.optString("material_detectado", null),
-                explicacion = aiJson.getString("explicacion")
-            )
+            FirebaseAuth.getInstance().currentUser
+                ?.getIdToken(false)
+                ?.await()
+                ?.token
         } catch (e: Exception) {
-            Log.e("ScannerVM", "❌ Error llamando a Claude API", e)
-            throw e
+            Log.e("ScannerVM", "❌ Error obteniendo token", e)
+            null
         }
-    }
-
-    /**
-     * Extrae el JSON de la respuesta de texto de Claude
-     */
-    private fun extractJSON(text: String): JSONObject {
-        // Buscar el JSON dentro del texto (puede estar envuelto en markdown)
-        val jsonStart = text.indexOf("{")
-        val jsonEnd = text.lastIndexOf("}") + 1
-
-        if (jsonStart == -1 || jsonEnd <= jsonStart) {
-            throw Exception("No se encontró JSON válido en la respuesta")
-        }
-
-        val jsonString = text.substring(jsonStart, jsonEnd)
-        return JSONObject(jsonString)
-    }
-
-    /**
-     * Calcula los EcoCoins según el material y la confianza de la IA
-     */
-    private fun calcularEcoCoins(material: TipoMaterial, confianza: Int): Int {
-        val baseCoins = material.ecoCoinsBase
-
-        // Bonus por alta confianza
-        val bonus = when {
-            confianza >= 95 -> 1.2 // +20%
-            confianza >= 85 -> 1.1 // +10%
-            else -> 1.0 // Sin bonus
-        }
-
-        return (baseCoins * bonus).toInt()
     }
 
     /**
@@ -246,11 +177,4 @@ data class ScannerUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val reciclajeRegistrado: Boolean = false
-)
-
-data class AIValidationResponse(
-    val esValido: Boolean,
-    val confianza: Int,
-    val materialDetectado: String?,
-    val explicacion: String
 )

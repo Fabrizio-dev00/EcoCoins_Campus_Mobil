@@ -56,6 +56,19 @@ interface ApiService {
     ): Response<ApiResponse<Reciclaje>>
 
     // ========================================
+    // ⭐ NUEVO: VALIDACIÓN CON IA GEMINI
+    // ========================================
+
+    /**
+     * Valida un material con IA Gemini y registra el reciclaje
+     */
+    @POST("api/reciclajes/validar-ia")
+    suspend fun validarMaterialConIA(
+        @Header("Authorization") token: String,
+        @Body request: ValidarIARequest
+    ): Response<ApiResponse<ValidarIAResponse>>
+
+    // ========================================
     // ENDPOINTS DE RECOMPENSAS
     // ========================================
 
