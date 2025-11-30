@@ -25,7 +25,7 @@ data class User(
     val telefono: String? = null,
 
     @SerializedName("nivel")
-    val nivel: Int = 1,
+    val nivel: Int = 0,
 
     @SerializedName("totalReciclajes")
     val totalReciclajes: Int = 0,
@@ -37,7 +37,8 @@ data class User(
     val estado: String = "activo",
 
     @SerializedName("firebaseUid")
-    val firebaseUid: String? = null
+    val firebaseUid: String? = null,
+    val email: String
 )
 
 // REQUEST MODELS

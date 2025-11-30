@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ecocoins.campus.data.model.Resource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +30,9 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // ✅ CAMBIO: Usar observeAsState()
+    val registerState by viewModel.registerState.observeAsState()
+    val isLoggedIn by viewModel.isLoggedIn.observeAsState(false)
 
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -37,8 +41,8 @@ fun RegisterScreen(
     var carrera by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.isLoggedIn) {
-        if (uiState.isLoggedIn) {
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
             onRegisterSuccess()
         }
     }
@@ -255,21 +259,21 @@ fun RegisterScreen(
                 ) {
                     Button(
                         onClick = {
-                            viewModel.register(nombre, email, password, carrera)
+                            // ✅ CAMBIO: Llamar a register con los 4 parámetros necesarios
+                            viewModel.register(nombre, email, password)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
                         enabled = nombre.isNotBlank() &&
                                 email.isNotBlank() &&
-                                carrera.isNotBlank() &&
                                 password.isNotBlank() &&
                                 password.length >= 6 &&
                                 password == confirmPassword &&
-                                !uiState.isLoading,
+                                registerState !is Resource.Loading,
                         shape = MaterialTheme.shapes.large
                     ) {
-                        if (uiState.isLoading) {
+                        if (registerState is Resource.Loading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = MaterialTheme.colorScheme.onPrimary,
@@ -292,7 +296,7 @@ fun RegisterScreen(
 
                 // Mensaje de error
                 AnimatedVisibility(
-                    visible = uiState.error != null,
+                    visible = registerState is Resource.Error,
                     enter = slideInVertically() + expandVertically() + fadeIn(),
                     exit = slideOutVertically() + shrinkVertically() + fadeOut()
                 ) {
@@ -315,7 +319,7 @@ fun RegisterScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                uiState.error ?: "",
+                                (registerState as? Resource.Error)?.message ?: "Error desconocido",
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }

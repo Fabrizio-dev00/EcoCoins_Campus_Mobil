@@ -1,105 +1,109 @@
 package com.ecocoins.campus.presentation.reciclajes
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.Reciclaje
+import com.ecocoins.campus.data.model.Resource
 import com.ecocoins.campus.data.repository.ReciclajeRepository
-import com.ecocoins.campus.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class ReciclajesUiState(
-    val isLoading: Boolean = false,
-    val reciclajes: List<Reciclaje> = emptyList(),
-    val tiposMateriales: List<String> = emptyList(),
-    val registroExitoso: Boolean = false,
-    val error: String? = null
-)
-
 @HiltViewModel
 class ReciclajesViewModel @Inject constructor(
-    private val reciclajeRepository: ReciclajeRepository
+    private val reciclajeRepository: ReciclajeRepository,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ReciclajesUiState())
-    val uiState: StateFlow<ReciclajesUiState> = _uiState.asStateFlow()
+    private val _reciclajes = MutableLiveData<Resource<List<Reciclaje>>>()
+    val reciclajes: LiveData<Resource<List<Reciclaje>>> = _reciclajes
+
+    private val _registrarResult = MutableLiveData<Resource<Reciclaje>>()
+    val registrarResult: LiveData<Resource<Reciclaje>> = _registrarResult
+
+    private val _validacionIA = MutableLiveData<Resource<Map<String, Any>>>()
+    val validacionIA: LiveData<Resource<Map<String, Any>>> = _validacionIA
 
     init {
-        loadReciclajes()
-        loadTiposMateriales()
+        cargarReciclajes()
     }
 
-    private fun loadReciclajes() {
+    fun cargarReciclajes() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _reciclajes.value = Resource.Loading()
+            val usuarioId = userPreferences.getUserId() ?: return@launch
 
-            when (val result = reciclajeRepository.getUserReciclajes()) {
-                is Result.Success -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            reciclajes = result.data
-                        )
-                    }
+            when (val result = reciclajeRepository.obtenerReciclajesUsuario(usuarioId)) {
+                is Resource.Success -> {
+                    _reciclajes.value = Resource.Success(result.data ?: emptyList())
                 }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = result.message
-                        )
-                    }
+                is Resource.Error -> {
+                    _reciclajes.value = Resource.Error(
+                        result.message ?: "Error al cargar reciclajes"
+                    )
                 }
-                else -> {}
+                is Resource.Loading -> {}
             }
         }
     }
 
-    private fun loadTiposMateriales() {
-        _uiState.update {
-            it.copy(tiposMateriales = reciclajeRepository.getTiposMateriales())
-        }
-    }
-
-    fun registrarReciclaje(tipoMaterial: String, pesoKg: Double, puntoRecoleccion: String) {
+    fun registrarReciclaje(
+        material: String,
+        pesoKg: Double,
+        ubicacion: String,
+        contenedorId: String
+    ) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, registroExitoso = false) }
+            _registrarResult.value = Resource.Loading()
+            val usuarioId = userPreferences.getUserId() ?: return@launch
 
             when (val result = reciclajeRepository.registrarReciclaje(
-                tipoMaterial,
-                pesoKg,
-                puntoRecoleccion
+                usuarioId, material, pesoKg, ubicacion, contenedorId
             )) {
-                is Result.Success -> {
-                    loadReciclajes()
-
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            registroExitoso = true
-                        )
-                    }
+                is Resource.Success -> {
+                    _registrarResult.value = Resource.Success(result.data!!)
+                    cargarReciclajes()
                 }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = result.message
-                        )
-                    }
+                is Resource.Error -> {
+                    _registrarResult.value = Resource.Error(
+                        result.message ?: "Error al registrar reciclaje"
+                    )
                 }
-                else -> {}
+                is Resource.Loading -> {}
             }
         }
     }
 
-    fun resetRegistroExitoso() {
-        _uiState.update { it.copy(registroExitoso = false) }
+    fun validarConIA(imageBase64: String) {
+        viewModelScope.launch {
+            _validacionIA.value = Resource.Loading()
+
+            when (val result = reciclajeRepository.validarConIA(imageBase64)) {
+                is Resource.Success -> {
+                    _validacionIA.value = Resource.Success(result.data!!)
+                }
+                is Resource.Error -> {
+                    _validacionIA.value = Resource.Error(
+                        result.message ?: "Error al validar imagen"
+                    )
+                }
+                is Resource.Loading -> {}
+            }
+        }
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
+    fun limpiarRegistrarResult() {
+        _registrarResult.value = null
+    }
+
+    fun limpiarValidacionIA() {
+        _validacionIA.value = null
+    }
+
+    fun refresh() {
+        cargarReciclajes()
     }
 }

@@ -1,7 +1,6 @@
 package com.ecocoins.campus.presentation.educacion
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,21 +12,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.ecocoins.campus.data.model.CategoriaEducativa
 import com.ecocoins.campus.data.model.ContenidoEducativo
-import com.ecocoins.campus.data.model.NivelDificultad
-import com.ecocoins.campus.data.model.TipoContenido
+import com.ecocoins.campus.data.model.Resource
 
 // Colores
 private val EcoGreenPrimary = Color(0xFF2D7A3E)
@@ -41,12 +39,15 @@ fun EducacionScreen(
     onNavigateBack: () -> Unit,
     viewModel: EducacionViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    var selectedCategoria by remember { mutableStateOf<CategoriaEducativa?>(null) }
+    // ✅ CAMBIO: Usar observeAsState() para LiveData
+    val contenidosState by viewModel.contenidos.observeAsState()
+    val progresoState by viewModel.progreso.observeAsState()
+
     var selectedContenido by remember { mutableStateOf<ContenidoEducativo?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadContenidos()
+        viewModel.cargarContenidos()
+        viewModel.cargarProgreso()
     }
 
     Scaffold(
@@ -81,7 +82,8 @@ fun EducacionScreen(
         },
         containerColor = BackgroundLight
     ) { padding ->
-        if (uiState.isLoading) {
+        // ✅ CAMBIO: Verificar loading desde Resource
+        if (contenidosState is Resource.Loading && (contenidosState as? Resource.Success)?.data == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -104,29 +106,15 @@ fun EducacionScreen(
                         visible = true,
                         enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
                     ) {
+                        val progreso = (progresoState as? Resource.Success)?.data
+                        val contenidos = (contenidosState as? Resource.Success)?.data ?: emptyList()
+
                         ProgresoAprendizajeCard(
-                            contenidosCompletados = uiState.contenidosCompletados,
-                            totalContenidos = uiState.contenidos.size,
-                            ecoCoinsGanados = uiState.ecoCoinsGanados
+                            contenidosCompletados = progreso?.contenidosCompletados ?: 0,
+                            totalContenidos = contenidos.size,
+                            ecoCoinsGanados = progreso?.ecoCoinsGanados ?: 0
                         )
                     }
-                }
-
-                // Categorías
-                item {
-                    Text(
-                        text = "Categorías",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EcoGreenPrimary
-                    )
-                }
-
-                item {
-                    CategoriasRow(
-                        selectedCategoria = selectedCategoria,
-                        onCategoriaSelected = { selectedCategoria = it }
-                    )
                 }
 
                 // Contenidos
@@ -143,26 +131,24 @@ fun EducacionScreen(
                             color = EcoGreenPrimary
                         )
 
+                        val contenidos = (contenidosState as? Resource.Success)?.data ?: emptyList()
                         Text(
-                            text = "${uiState.contenidos.size} items",
+                            text = "${contenidos.size} items",
                             fontSize = 14.sp,
                             color = Color(0xFF757575)
                         )
                     }
                 }
 
-                val contenidosFiltrados = if (selectedCategoria != null) {
-                    uiState.contenidos.filter { it.categoria == selectedCategoria }
-                } else {
-                    uiState.contenidos
-                }
+                // ✅ CAMBIO: Obtener contenidos desde Resource
+                val contenidos = (contenidosState as? Resource.Success)?.data ?: emptyList()
 
-                if (contenidosFiltrados.isEmpty()) {
+                if (contenidos.isEmpty()) {
                     item {
                         EmptyContenidosMessage()
                     }
                 } else {
-                    items(contenidosFiltrados) { contenido ->
+                    items(contenidos) { contenido ->
                         AnimatedVisibility(
                             visible = true,
                             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
@@ -286,7 +272,7 @@ fun ProgresoAprendizajeCard(
                 )
             }
 
-            Divider(color = Color.White.copy(alpha = 0.3f))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -316,72 +302,6 @@ fun ProgresoAprendizajeCard(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun CategoriasRow(
-    selectedCategoria: CategoriaEducativa?,
-    onCategoriaSelected: (CategoriaEducativa?) -> Unit
-) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Todos
-        item {
-            CategoriaChip(
-                titulo = "Todos",
-                icono = "📖",
-                isSelected = selectedCategoria == null,
-                onClick = { onCategoriaSelected(null) }
-            )
-        }
-
-        // Categorías
-        items(CategoriaEducativa.values().toList()) { categoria ->
-            CategoriaChip(
-                titulo = getCategoriaNombre(categoria),
-                icono = getCategoriaIcono(categoria),
-                isSelected = selectedCategoria == categoria,
-                onClick = { onCategoriaSelected(categoria) }
-            )
-        }
-    }
-}
-
-@Composable
-fun CategoriaChip(
-    titulo: String,
-    icono: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) EcoGreenPrimary else Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = icono,
-                fontSize = 24.sp
-            )
-            Text(
-                text = titulo,
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else Color(0xFF212121)
-            )
         }
     }
 }
@@ -422,13 +342,13 @@ fun ContenidoCard(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(getTipoContenidoColor(contenido.tipo).copy(alpha = 0.2f)),
+                            .background(EcoGreenPrimary.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = getTipoContenidoIcon(contenido.tipo),
+                            imageVector = Icons.Default.Article,
                             contentDescription = null,
-                            tint = getTipoContenidoColor(contenido.tipo),
+                            tint = EcoGreenPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -444,20 +364,11 @@ fun ContenidoCard(
                         )
 
                         Text(
-                            text = getCategoriaNombre(contenido.categoria),
+                            text = contenido.categoria.toString(),
                             fontSize = 12.sp,
                             color = Color(0xFF757575)
                         )
                     }
-                }
-
-                if (contenido.completado) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Completado",
-                        tint = EcoGreenPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
 
@@ -470,7 +381,7 @@ fun ContenidoCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Divider()
+            HorizontalDivider()
 
             // Footer
             Row(
@@ -482,13 +393,13 @@ fun ContenidoCard(
                     // Dificultad
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = getDificultadColor(contenido.dificultad).copy(alpha = 0.2f)
+                        color = EcoGreenPrimary.copy(alpha = 0.2f)
                     ) {
                         Text(
-                            text = getDificultadNombre(contenido.dificultad),
+                            text = contenido.dificultad.toString(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = getDificultadColor(contenido.dificultad),
+                            color = EcoGreenPrimary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
@@ -550,9 +461,9 @@ fun ContenidoDetailDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = getTipoContenidoIcon(contenido.tipo),
+                        imageVector = Icons.Default.Article,
                         contentDescription = null,
-                        tint = getTipoContenidoColor(contenido.tipo),
+                        tint = EcoGreenPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
@@ -564,13 +475,13 @@ fun ContenidoDetailDialog(
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = getDificultadColor(contenido.dificultad).copy(alpha = 0.2f)
+                    color = EcoGreenPrimary.copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = getDificultadNombre(contenido.dificultad),
+                        text = contenido.dificultad.toString(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = getDificultadColor(contenido.dificultad),
+                        color = EcoGreenPrimary,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
@@ -589,7 +500,7 @@ fun ContenidoDetailDialog(
                 }
 
                 item {
-                    Divider()
+                    HorizontalDivider()
                 }
 
                 item {
@@ -624,7 +535,7 @@ fun ContenidoDetailDialog(
                 }
 
                 item {
-                    Divider()
+                    HorizontalDivider()
                 }
 
                 item {
@@ -672,15 +583,13 @@ fun ContenidoDetailDialog(
             }
         },
         confirmButton = {
-            if (!contenido.completado) {
-                Button(
-                    onClick = { onCompletar(contenido.id) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = EcoGreenPrimary
-                    )
-                ) {
-                    Text("Marcar como Completado")
-                }
+            Button(
+                onClick = { onCompletar(contenido.id) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = EcoGreenPrimary
+                )
+            ) {
+                Text("Marcar como Completado")
             }
         },
         dismissButton = {
@@ -720,65 +629,8 @@ fun EmptyContenidosMessage() {
                 text = "Pronto agregaremos más contenido educativo",
                 fontSize = 14.sp,
                 color = Color(0xFF757575),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-// Helper functions
-fun getCategoriaNombre(categoria: CategoriaEducativa): String {
-    return when (categoria) {
-        CategoriaEducativa.RECICLAJE_BASICO -> "Reciclaje Básico"
-        CategoriaEducativa.SEPARACION_RESIDUOS -> "Separación de Residuos"
-        CategoriaEducativa.IMPACTO_AMBIENTAL -> "Impacto Ambiental"
-        CategoriaEducativa.ECONOMIA_CIRCULAR -> "Economía Circular"
-        CategoriaEducativa.CONSEJOS_PRACTICOS -> "Consejos Prácticos"
-    }
-}
-
-fun getCategoriaIcono(categoria: CategoriaEducativa): String {
-    return when (categoria) {
-        CategoriaEducativa.RECICLAJE_BASICO -> "♻️"
-        CategoriaEducativa.SEPARACION_RESIDUOS -> "🗑️"
-        CategoriaEducativa.IMPACTO_AMBIENTAL -> "🌍"
-        CategoriaEducativa.ECONOMIA_CIRCULAR -> "🔄"
-        CategoriaEducativa.CONSEJOS_PRACTICOS -> "💡"
-    }
-}
-
-fun getTipoContenidoIcon(tipo: TipoContenido): ImageVector {
-    return when (tipo) {
-        TipoContenido.ARTICULO -> Icons.Default.Article
-        TipoContenido.VIDEO -> Icons.Default.PlayCircle
-        TipoContenido.INFOGRAFIA -> Icons.Default.Image
-        TipoContenido.QUIZ -> Icons.Default.Quiz
-        TipoContenido.GUIA -> Icons.Default.MenuBook
-    }
-}
-
-fun getTipoContenidoColor(tipo: TipoContenido): Color {
-    return when (tipo) {
-        TipoContenido.ARTICULO -> Color(0xFF2196F3)
-        TipoContenido.VIDEO -> Color(0xFFE91E63)
-        TipoContenido.INFOGRAFIA -> Color(0xFF9C27B0)
-        TipoContenido.QUIZ -> Color(0xFFFF9800)
-        TipoContenido.GUIA -> Color(0xFF4CAF50)
-    }
-}
-
-fun getDificultadColor(dificultad: NivelDificultad): Color {
-    return when (dificultad) {
-        NivelDificultad.PRINCIPIANTE -> Color(0xFF4CAF50)
-        NivelDificultad.INTERMEDIO -> Color(0xFFFF9800)
-        NivelDificultad.AVANZADO -> Color(0xFFE53935)
-    }
-}
-
-fun getDificultadNombre(dificultad: NivelDificultad): String {
-    return when (dificultad) {
-        NivelDificultad.PRINCIPIANTE -> "PRINCIPIANTE"
-        NivelDificultad.INTERMEDIO -> "INTERMEDIO"
-        NivelDificultad.AVANZADO -> "AVANZADO"
     }
 }

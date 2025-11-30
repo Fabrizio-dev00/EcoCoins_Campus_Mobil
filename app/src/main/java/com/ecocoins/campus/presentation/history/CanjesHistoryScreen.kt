@@ -363,7 +363,7 @@ fun CanjeCard(
                 EstadoBadge(estado = canje.estado)
             }
 
-            Divider(color = Color(0xFFE0E0E0))
+            HorizontalDivider(color = Color(0xFFE0E0E0))
 
             // Información adicional
             Row(
@@ -511,7 +511,7 @@ fun CanjeDetailDialog(
                     }
                 }
 
-                Divider()
+                HorizontalDivider()
 
                 // Estado destacado
                 Row(
@@ -659,6 +659,41 @@ fun CanjeDetailDialog(
 }
 
 @Composable
+fun DetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    valueColor: Color = Color(0xFF212121)
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFF757575),
+            modifier = Modifier.size(20.dp)
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = Color(0xFF757575)
+            )
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = valueColor
+            )
+        }
+    }
+}
+
+@Composable
 fun EmptyCanjesState(selectedTab: String) {
     Column(
         modifier = Modifier
@@ -711,5 +746,27 @@ fun getEstadoColor(estado: String): Color {
         "COMPLETADO" -> StatusCompleted
         "CANCELADO" -> StatusCancelled
         else -> Color.Gray
+    }
+}
+
+fun formatDate(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        date?.let { outputFormat.format(it) } ?: dateString
+    } catch (e: Exception) {
+        dateString.take(10)
+    }
+}
+
+fun formatDateLong(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("dd 'de' MMMM, yyyy 'a las' HH:mm", Locale("es"))
+        val date = inputFormat.parse(dateString)
+        date?.let { outputFormat.format(it) } ?: dateString
+    } catch (e: Exception) {
+        dateString
     }
 }

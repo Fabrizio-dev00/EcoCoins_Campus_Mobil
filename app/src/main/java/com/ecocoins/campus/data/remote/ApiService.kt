@@ -1,139 +1,81 @@
 package com.ecocoins.campus.data.remote
 
-import com.ecocoins.campus.data.model.*
-import retrofit2.Response
+import com.ecocoins.campus.data.model.ApiResponse
+import com.ecocoins.campus.data.model.Canje
+import com.ecocoins.campus.data.model.Reciclaje
+import com.ecocoins.campus.data.model.Recompensa
+import com.ecocoins.campus.data.model.User
 import retrofit2.http.*
 
 interface ApiService {
 
-    // ========================================
-    // 🔥 ENDPOINTS DE AUTENTICACIÓN FIREBASE
-    // ========================================
+    // ========== AUTH ==========
 
-    /**
-     * Sincroniza usuario de Firebase con MongoDB
-     */
-    @POST("api/auth/sync")
-    suspend fun sincronizarUsuario(
-        @Header("Authorization") authHeader: String,
-        @Body request: Map<String, String>
-    ): Response<ApiResponse<User>>
+    @POST("api/auth/login")
+    suspend fun login(
+        @Body credentials: Map<String, String>
+    ): ApiResponse<Map<String, Any>>
 
-    /**
-     * Obtiene el perfil del usuario autenticado
-     */
-    @GET("api/auth/perfil")
-    suspend fun obtenerPerfil(
-        @Header("Authorization") authHeader: String
+    @POST("api/auth/register")
+    suspend fun register(
+        @Body userData: Map<String, String>
     ): ApiResponse<User>
 
-    /**
-     * Health check del servicio
-     */
-    @GET("api/auth/health")
-    suspend fun healthCheck(): ApiResponse<String>
+    // ========== USUARIOS ==========
 
-    // ========================================
-    // ENDPOINTS DE RECICLAJES
-    // ========================================
+    @GET("api/usuarios/{id}")
+    suspend fun obtenerUsuario(
+        @Path("id") usuarioId: String
+    ): ApiResponse<User>
 
-    /**
-     * Obtiene los reciclajes de un usuario
-     */
-    @GET("api/reciclajes/usuario/{usuarioId}")
-    suspend fun getReciclajesByUsuario(
-        @Path("usuarioId") usuarioId: String,
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<Reciclaje>>>
+    @PUT("api/usuarios/{id}")
+    suspend fun actualizarUsuario(
+        @Path("id") usuarioId: String,
+        @Body userData: Map<String, Any>
+    ): ApiResponse<User>
 
-    /**
-     * Registra un nuevo reciclaje
-     */
+    // ========== RECICLAJES ==========
+
     @POST("api/reciclajes")
     suspend fun registrarReciclaje(
-        @Header("Authorization") token: String,
-        @Body request: ReciclajeRequest
-    ): Response<ApiResponse<Reciclaje>>
+        @Body reciclajeData: Map<String, Any>
+    ): ApiResponse<Reciclaje>
 
-    // ========================================
-    // ⭐ NUEVO: VALIDACIÓN CON IA GEMINI
-    // ========================================
+    @GET("api/reciclajes/usuario/{usuarioId}")
+    suspend fun obtenerReciclajesUsuario(
+        @Path("usuarioId") usuarioId: String
+    ): ApiResponse<List<Reciclaje>>
 
-    /**
-     * Valida un material con IA Gemini y registra el reciclaje
-     */
     @POST("api/reciclajes/validar-ia")
-    suspend fun validarMaterialConIA(
-        @Header("Authorization") token: String,
-        @Body request: ValidarIARequest
-    ): Response<ApiResponse<ValidarIAResponse>>
+    suspend fun validarConIA(
+        @Body imageData: Map<String, String>
+    ): ApiResponse<Map<String, Any>>
 
-    // ========================================
-    // ENDPOINTS DE RECOMPENSAS
-    // ========================================
+    // ========== RECOMPENSAS ==========
 
-    /**
-     * Obtiene todas las recompensas disponibles
-     */
     @GET("api/recompensas")
-    suspend fun getRecompensas(
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<Recompensa>>>
+    suspend fun obtenerRecompensas(): ApiResponse<List<Recompensa>>
 
-    /**
-     * Canjea una recompensa
-     */
-    @POST("api/canjes/canjear")
+    @GET("api/recompensas/{id}")
+    suspend fun obtenerRecompensa(
+        @Path("id") recompensaId: String
+    ): ApiResponse<Recompensa>
+
+    // ========== CANJES ==========
+
+    @POST("api/canjes")
     suspend fun canjearRecompensa(
-        @Header("Authorization") token: String,
-        @Body request: CanjeRequest
-    ): Response<ApiResponse<CanjeResponse>>
+        @Body canjeData: Map<String, String>
+    ): ApiResponse<Canje>
 
-    /**
-     * Obtiene los canjes de un usuario
-     */
     @GET("api/canjes/usuario/{usuarioId}")
-    suspend fun getCanjesByUsuario(
+    suspend fun obtenerCanjesUsuario(
         @Path("usuarioId") usuarioId: String,
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<Canje>>>
+        @Query("estado") estado: String? = null
+    ): ApiResponse<List<Canje>>
 
-    // ========================================
-    // 🏪 ENDPOINTS DE PROFESORES Y TIENDA
-    // ========================================
-
-    /**
-     * Obtiene todos los profesores activos con sus recompensas
-     */
-    @GET("api/profesores/activos")
-    suspend fun getProfesoresActivos(
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<Profesor>>>
-
-    /**
-     * Obtiene un profesor específico por ID
-     */
-    @GET("api/profesores/{profesorId}")
-    suspend fun getProfesorById(
-        @Path("profesorId") profesorId: String,
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<Profesor>>
-
-    /**
-     * Canjea una recompensa de un profesor
-     */
-    @POST("api/profesores/canjear")
-    suspend fun canjearRecompensaProfesor(
-        @Header("Authorization") token: String,
-        @Body request: CanjearRecompensaProfesorRequest
-    ): Response<ApiResponse<CanjearRecompensaProfesorResponse>>
-
-    /**
-     * Obtiene el historial de canjes con profesores del usuario
-     */
-    @GET("api/profesores/historial/{usuarioId}")
-    suspend fun getHistorialCanjesProfesores(
-        @Path("usuarioId") usuarioId: String,
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<CanjearRecompensaProfesorResponse>>>
+    @GET("api/canjes/{id}")
+    suspend fun obtenerCanje(
+        @Path("id") canjeId: String
+    ): ApiResponse<Canje>
 }

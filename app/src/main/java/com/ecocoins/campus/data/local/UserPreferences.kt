@@ -1,71 +1,65 @@
 package com.ecocoins.campus.data.local
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import android.content.SharedPreferences
+import com.ecocoins.campus.data.model.User
+import com.google.gson.Gson
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
+class UserPreferences(context: Context) {
 
-class UserPreferences(private val context: Context) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("ecocoins_prefs", Context.MODE_PRIVATE)
+
+    private val gson = Gson()
 
     companion object {
-        private val TOKEN_KEY = stringPreferencesKey("auth_token")
-        private val USER_ID_KEY = stringPreferencesKey("user_id")
-        private val USER_NAME_KEY = stringPreferencesKey("user_name")
-        private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
-        private val ECO_COINS_KEY = doublePreferencesKey("eco_coins")
-        private val IS_LOGGED_IN_KEY = booleanPreferencesKey("is_logged_in")
+        private const val KEY_USER = "user"
+        private const val KEY_USER_ID = "user_id"
+        private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_FIREBASE_UID = "firebase_uid"
     }
 
-    suspend fun saveUserSession(
-        token: String,
-        userId: String,
-        userName: String,
-        email: String,
-        ecoCoins: Double
-    ) {
-        context.dataStore.edit { prefs ->
-            prefs[TOKEN_KEY] = token
-            prefs[USER_ID_KEY] = userId
-            prefs[USER_NAME_KEY] = userName
-            prefs[USER_EMAIL_KEY] = email
-            prefs[ECO_COINS_KEY] = ecoCoins
-            prefs[IS_LOGGED_IN_KEY] = true
+    fun saveUser(user: User) {
+        prefs.edit().apply {
+            putString(KEY_USER, gson.toJson(user))
+            putString(KEY_USER_ID, user.id)
+            putBoolean(KEY_IS_LOGGED_IN, true)
+            apply()
         }
     }
 
-    val authToken: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[TOKEN_KEY]
-    }
-
-    val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[IS_LOGGED_IN_KEY] ?: false
-    }
-
-    val userId: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[USER_ID_KEY]
-    }
-
-    val userName: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[USER_NAME_KEY]
-    }
-
-    val ecoCoins: Flow<Double> = context.dataStore.data.map { prefs ->
-        prefs[ECO_COINS_KEY] ?: 0.0
-    }
-
-    suspend fun updateEcoCoins(newAmount: Double) {
-        context.dataStore.edit { prefs ->
-            prefs[ECO_COINS_KEY] = newAmount
+    fun getUser(): User? {
+        val userJson = prefs.getString(KEY_USER, null) ?: return null
+        return try {
+            gson.fromJson(userJson, User::class.java)
+        } catch (e: Exception) {
+            null
         }
     }
 
-    suspend fun clearSession() {
-        context.dataStore.edit { prefs ->
-            prefs.clear()
+    fun getUserId(): String? {
+        return prefs.getString(KEY_USER_ID, null)
+    }
+
+    fun saveFirebaseUid(uid: String) {
+        prefs.edit().putString(KEY_FIREBASE_UID, uid).apply()
+    }
+
+    fun getFirebaseUid(): String? {
+        return prefs.getString(KEY_FIREBASE_UID, null)
+    }
+
+    fun isLoggedIn(): Boolean {
+        return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+
+    fun clearUser() {
+        prefs.edit().apply {
+            remove(KEY_USER)
+            remove(KEY_USER_ID)
+            remove(KEY_FIREBASE_UID)
+            putBoolean(KEY_IS_LOGGED_IN, false)
+            apply()
         }
     }
 }

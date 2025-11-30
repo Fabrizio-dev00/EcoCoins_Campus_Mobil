@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +55,10 @@ fun DashboardScreen(
     onNavigateToSoporte: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // ✅ CAMBIO: Usar observeAsState() para LiveData
+    val currentUser by viewModel.currentUser.observeAsState()
+    val notificacionesNoLeidas by viewModel.notificacionesNoLeidas.observeAsState(0)
+
     val scope = rememberCoroutineScope()
 
     // Animación de escala para el refresh
@@ -68,10 +72,10 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             DashboardTopBar(
-                ecoCoins = uiState.user?.ecoCoins ?: 0,
+                ecoCoins = currentUser?.ecoCoins ?: 0,
                 onRefreshClick = {
                     isRefreshing = true
-                    viewModel.loadDashboardData()
+                    viewModel.refresh()
                     scope.launch {
                         delay(500)
                         isRefreshing = false
@@ -83,301 +87,229 @@ fun DashboardScreen(
         },
         containerColor = BackgroundLight
     ) { padding ->
-        if (uiState.isLoading && uiState.user == null) {
-            // Loading inicial
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .scale(scale),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Saludo personalizado
+            item {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
                 ) {
-                    CircularProgressIndicator(color = EcoGreenPrimary)
-                    Text(
-                        "Cargando tu información...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    GreetingSection(userName = currentUser?.nombre ?: "Usuario")
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .scale(scale),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Saludo personalizado
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
-                    ) {
-                        GreetingSection(userName = uiState.user?.nombre ?: "Usuario")
-                    }
+
+            // Botón principal de reciclaje
+            item {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                ) {
+                    RecycleNowCard(onClick = onNavigateToReciclajes)
                 }
+            }
 
-                // Botón principal de reciclaje
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
-                    ) {
-                        RecycleNowCard(onClick = onNavigateToReciclajes)
-                    }
-                }
+            // Acciones rápidas
+            item {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn() + expandVertically()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Acciones rápidas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = EcoGreenPrimary
+                        )
 
-                // Acciones rápidas
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + expandVertically()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                "Acciones rápidas",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                QuickActionCard(
-                                    title = "Canjear",
-                                    icon = Icons.Default.Redeem,
-                                    onClick = onNavigateToRecompensas,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                QuickActionCard(
-                                    title = "Mi Perfil",
-                                    icon = Icons.Default.Person,
-                                    onClick = onNavigateToPerfil,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ===== SECCIÓN GAMIFICACIÓN - FASE 2 =====
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                "Gamificación 🎮",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                GamificationCard(
-                                    title = "Ranking",
-                                    icon = "🏆",
-                                    description = "Top usuarios",
-                                    onClick = onNavigateToRanking,
-                                    modifier = Modifier.weight(1f),
-                                    color = Color(0xFFFFD700)
-                                )
-                                GamificationCard(
-                                    title = "Logros",
-                                    icon = "🎖️",
-                                    description = "Tus logros",
-                                    onClick = onNavigateToLogros,
-                                    modifier = Modifier.weight(1f),
-                                    color = Color(0xFF9C27B0)
-                                )
-                            }
-
-                            GamificationCard(
-                                title = "Estadísticas Detalladas",
-                                icon = "📊",
-                                description = "Análisis completo de tu impacto",
-                                onClick = onNavigateToEstadisticas,
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF2196F3),
-                                isWide = true
-                            )
-                        }
-                    }
-                }
-
-                // ===== SECCIÓN COMUNIDAD - FASE 3 =====
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                "Comunidad 🌍",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                GamificationCard(
-                                    title = "Referidos",
-                                    icon = "👥",
-                                    description = "Invita amigos",
-                                    onClick = onNavigateToReferidos,
-                                    modifier = Modifier.weight(1f),
-                                    color = Color(0xFF4CAF50)
-                                )
-                                GamificationCard(
-                                    title = "Mapa",
-                                    icon = "🗺️",
-                                    description = "Puntos cerca",
-                                    onClick = onNavigateToMapa,
-                                    modifier = Modifier.weight(1f),
-                                    color = Color(0xFF00BCD4)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ===== SECCIÓN APRENDIZAJE Y AYUDA - FASE 4 =====
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                "Aprendizaje y Ayuda 📚",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                GamificationCard(
-                                    title = "Educación",
-                                    icon = "📖",
-                                    description = "Aprende más",
-                                    onClick = onNavigateToEducacion,
-                                    modifier = Modifier.weight(1f),
-                                    color = Color(0xFFFF5722)
-                                )
-                                GamificationCard(
-                                    title = "Soporte",
-                                    icon = "🎧",
-                                    description = "¿Necesitas ayuda?",
-                                    onClick = onNavigateToSoporte,
-                                    modifier = Modifier.weight(1f),
-                                    color = Color(0xFF673AB7)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Estadísticas del usuario
-                uiState.user?.let { user ->
-                    item {
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(
-                                    "Mis Estadísticas",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = EcoGreenPrimary
-                                )
-
-                                StatsCard(
-                                    totalReciclajes = user.totalReciclajes,
-                                    totalKg = user.totalKgReciclados,
-                                    nivel = user.nivel
-                                )
-                            }
+                            QuickActionCard(
+                                title = "Canjear",
+                                icon = Icons.Default.Redeem,
+                                onClick = onNavigateToRecompensas,
+                                modifier = Modifier.weight(1f)
+                            )
+                            QuickActionCard(
+                                title = "Mi Perfil",
+                                icon = Icons.Default.Person,
+                                onClick = onNavigateToPerfil,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
+            }
 
-                // Actividades recientes
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
-                    ) {
-                        RecentActivitiesHeader(
-                            onVerTodoClick = onNavigateToReciclajes
+            // ===== SECCIÓN GAMIFICACIÓN - FASE 2 =====
+            item {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Gamificación 🎮",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = EcoGreenPrimary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            GamificationCard(
+                                title = "Ranking",
+                                icon = "🏆",
+                                description = "Top usuarios",
+                                onClick = onNavigateToRanking,
+                                modifier = Modifier.weight(1f),
+                                color = Color(0xFFFFD700)
+                            )
+                            GamificationCard(
+                                title = "Logros",
+                                icon = "🎖️",
+                                description = "Tus logros",
+                                onClick = onNavigateToLogros,
+                                modifier = Modifier.weight(1f),
+                                color = Color(0xFF9C27B0)
+                            )
+                        }
+
+                        GamificationCard(
+                            title = "Estadísticas Detalladas",
+                            icon = "📊",
+                            description = "Análisis completo de tu impacto",
+                            onClick = onNavigateToEstadisticas,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFF2196F3),
+                            isWide = true
                         )
                     }
                 }
-
-                if (uiState.reciclajes.isEmpty()) {
-                    item {
-                        EmptyActivitiesCard()
-                    }
-                } else {
-                    items(uiState.reciclajes.take(5)) { reciclaje ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
-                        ) {
-                            ReciclajeCardImproved(reciclaje)
-                        }
-                    }
-                }
-
-                // Espaciado final
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
             }
-        }
 
-        // Mensaje de error
-        uiState.error?.let { error ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.BottomCenter
-            ) {
+            // ===== SECCIÓN COMUNIDAD - FASE 3 =====
+            item {
                 AnimatedVisibility(
                     visible = true,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
                 ) {
-                    Snackbar(
-                        modifier = Modifier.padding(16.dp),
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        action = {
-                            TextButton(onClick = { viewModel.clearError() }) {
-                                Text("OK", color = MaterialTheme.colorScheme.error)
-                            }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Comunidad 🌍",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = EcoGreenPrimary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            GamificationCard(
+                                title = "Referidos",
+                                icon = "👥",
+                                description = "Invita amigos",
+                                onClick = onNavigateToReferidos,
+                                modifier = Modifier.weight(1f),
+                                color = Color(0xFF4CAF50)
+                            )
+                            GamificationCard(
+                                title = "Mapa",
+                                icon = "🗺️",
+                                description = "Puntos cerca",
+                                onClick = onNavigateToMapa,
+                                modifier = Modifier.weight(1f),
+                                color = Color(0xFF00BCD4)
+                            )
                         }
-                    ) {
-                        Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
+            }
+
+            // ===== SECCIÓN APRENDIZAJE Y AYUDA - FASE 4 =====
+            item {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Aprendizaje y Ayuda 📚",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = EcoGreenPrimary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            GamificationCard(
+                                title = "Educación",
+                                icon = "📖",
+                                description = "Aprende más",
+                                onClick = onNavigateToEducacion,
+                                modifier = Modifier.weight(1f),
+                                color = Color(0xFFFF5722)
+                            )
+                            GamificationCard(
+                                title = "Soporte",
+                                icon = "🎧",
+                                description = "¿Necesitas ayuda?",
+                                onClick = onNavigateToSoporte,
+                                modifier = Modifier.weight(1f),
+                                color = Color(0xFF673AB7)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Estadísticas del usuario
+            currentUser?.let { user ->
+                item {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                "Mis Estadísticas",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = EcoGreenPrimary
+                            )
+
+                            StatsCard(
+                                totalReciclajes = user.totalReciclajes,
+                                totalKg = user.totalKgReciclados,
+                                nivel = user.nivel
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Mensaje de estado vacío
+            item {
+                EmptyActivitiesCard()
+            }
+
+            // Espaciado final
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -607,7 +539,6 @@ fun QuickActionCard(
     }
 }
 
-// ===== GAMIFICATION CARD =====
 @Composable
 fun GamificationCard(
     title: String,
@@ -642,7 +573,6 @@ fun GamificationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         if (isWide) {
-            // Layout horizontal para card ancha
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -684,7 +614,6 @@ fun GamificationCard(
                 )
             }
         } else {
-            // Layout vertical para cards pequeñas
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -744,13 +673,13 @@ fun StatsCard(
                 value = "$totalReciclajes",
                 icon = Icons.Default.Recycling
             )
-            Divider(color = Color(0xFFE0E0E0))
+            HorizontalDivider(color = Color(0xFFE0E0E0))
             StatRow(
                 label = "Kg reciclados",
                 value = String.format("%.2f kg", totalKg),
                 icon = Icons.Default.Scale
             )
-            Divider(color = Color(0xFFE0E0E0))
+            HorizontalDivider(color = Color(0xFFE0E0E0))
             StatRow(
                 label = "Nivel",
                 value = getNivelNombre(nivel),
@@ -797,122 +726,6 @@ fun StatRow(
 }
 
 @Composable
-fun RecentActivitiesHeader(onVerTodoClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Actividades Recientes",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = EcoGreenPrimary
-        )
-
-        TextButton(onClick = onVerTodoClick) {
-            Text(
-                text = "Ver Todo",
-                color = EcoGreenPrimary,
-                fontSize = 14.sp
-            )
-        }
-    }
-}
-
-@Composable
-fun ReciclajeCardImproved(reciclaje: Reciclaje) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Ícono del material
-            Surface(
-                shape = CircleShape,
-                color = getMaterialColor(reciclaje.tipoMaterial).copy(alpha = 0.1f),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Recycling,
-                        contentDescription = reciclaje.tipoMaterial,
-                        tint = getMaterialColor(reciclaje.tipoMaterial),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Información
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = reciclaje.tipoMaterial,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF212121)
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = formatDate(reciclaje.fecha),
-                    fontSize = 12.sp,
-                    color = Color(0xFF757575)
-                )
-            }
-
-            // EcoCoins y estado
-            Column(horizontalAlignment = Alignment.End) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Paid,
-                        contentDescription = "EcoCoins",
-                        tint = EcoOrange,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "+${reciclaje.ecoCoinsGanadas}",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EcoOrange
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = StatusCompleted.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = "COMPLETADO",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StatusCompleted,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun EmptyActivitiesCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -951,29 +764,6 @@ fun EmptyActivitiesCard() {
                 color = Color(0xFF757575)
             )
         }
-    }
-}
-
-// Helper functions
-fun getMaterialColor(material: String): Color {
-    return when (material.lowercase()) {
-        "plástico", "botella de plástico" -> Color(0xFF2196F3)
-        "papel", "papel de oficina" -> Color(0xFF795548)
-        "vidrio", "vidrio transparente" -> Color(0xFF4CAF50)
-        "metal", "lata de aluminio" -> Color(0xFF607D8B)
-        "cartón", "cartón corrugado" -> Color(0xFF795548)
-        else -> EcoGreenPrimary
-    }
-}
-
-fun formatDate(dateString: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-        val date = inputFormat.parse(dateString)
-        date?.let { outputFormat.format(it) } ?: dateString.take(10)
-    } catch (e: Exception) {
-        dateString.take(10)
     }
 }
 

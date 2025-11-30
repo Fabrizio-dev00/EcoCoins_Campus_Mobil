@@ -2,9 +2,10 @@ package com.ecocoins.campus.presentation.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.Canje
+import com.ecocoins.campus.data.model.Resource
 import com.ecocoins.campus.data.repository.RecompensasRepository
-import com.ecocoins.campus.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CanjesHistoryViewModel @Inject constructor(
-    private val recompensasRepository: RecompensasRepository
+    private val recompensasRepository: RecompensasRepository,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CanjesHistoryUiState())
@@ -29,9 +31,15 @@ class CanjesHistoryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = recompensasRepository.getMisCanjes()) {
-                is Result.Success -> {
-                    val canjes = result.data
+            val usuarioId = userPreferences.getUserId()
+            if (usuarioId.isNullOrEmpty()) {
+                _uiState.update { it.copy(isLoading = false, error = "Usuario no identificado") }
+                return@launch
+            }
+
+            when (val result = recompensasRepository.obtenerCanjesUsuario(usuarioId)) {
+                is Resource.Success -> {
+                    val canjes = result.data ?: emptyList()
 
                     // Calcular total gastado
                     val totalGastado = canjes.sumOf { it.costoEcoCoins }
@@ -45,7 +53,7 @@ class CanjesHistoryViewModel @Inject constructor(
                         )
                     }
                 }
-                is Result.Error -> {
+                is Resource.Error -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -53,7 +61,6 @@ class CanjesHistoryViewModel @Inject constructor(
                         )
                     }
                 }
-                else -> {}
             }
         }
     }

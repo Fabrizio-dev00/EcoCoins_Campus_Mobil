@@ -5,13 +5,13 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,8 +23,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.ecocoins.campus.data.model.EstadisticaMaterial
-import com.ecocoins.campus.data.model.DatoTendencia
+import com.ecocoins.campus.data.model.EstadisticasDetalladas
+import com.ecocoins.campus.data.model.MaterialStats
+import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.data.model.TendenciaDia
 import kotlin.math.roundToInt
 
 // Colores
@@ -45,10 +47,10 @@ fun EstadisticasScreen(
     onNavigateBack: () -> Unit,
     viewModel: EstadisticasViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val estadisticasState by viewModel.estadisticas.observeAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.loadEstadisticas()
+        viewModel.cargarEstadisticas()
     }
 
     Scaffold(
@@ -83,164 +85,179 @@ fun EstadisticasScreen(
         },
         containerColor = BackgroundLight
     ) { padding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = EcoGreenPrimary)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Resumen General
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
-                    ) {
-                        ResumenGeneralCard(uiState = uiState)
-                    }
-                }
-
-                // Distribución por Material
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Distribución por Material",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            MaterialesDistribucionCard(
-                                materiales = uiState.porTipoMaterial
-                            )
-                        }
-                    }
-                }
-
-                // Gráfico de Tendencia Semanal
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Tendencia Semanal",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            TendenciaSemanolCard(
-                                tendencias = uiState.tendenciaSemanal
-                            )
-                        }
-                    }
-                }
-
-                // Impacto Ambiental
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + expandVertically()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Tu Impacto Ambiental 🌍",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            ImpactoAmbientalCard(uiState = uiState)
-                        }
-                    }
-                }
-
-                // Comparativas
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Comparativas",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            ComparativasCard(uiState = uiState)
-                        }
-                    }
-                }
-
-                // Rachas
-                item {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + scaleIn()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Rachas 🔥",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EcoGreenPrimary
-                            )
-
-                            RachasCard(uiState = uiState)
-                        }
-                    }
-                }
-
-                // Espaciado final
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-        }
-
-        // Error
-        uiState.error?.let { error ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { viewModel.clearError() }) {
-                            Text("OK")
-                        }
-                    }
+        when (estadisticasState) {
+            is Resource.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(error)
+                    CircularProgressIndicator(color = EcoGreenPrimary)
                 }
             }
+            is Resource.Success -> {
+                val estadisticas = (estadisticasState as Resource.Success).data!!
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Resumen General
+                    item {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
+                        ) {
+                            ResumenGeneralCard(estadisticas = estadisticas)
+                        }
+                    }
+
+                    // Distribución por Material
+                    item {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "Distribución por Material",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EcoGreenPrimary
+                                )
+
+                                MaterialesDistribucionCard(
+                                    materiales = estadisticas.distribucionMateriales
+                                )
+                            }
+                        }
+                    }
+
+                    // Gráfico de Tendencia Semanal
+                    item {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "Tendencia Semanal",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EcoGreenPrimary
+                                )
+
+                                TendenciaSemanolCard(
+                                    tendencias = estadisticas.tendenciaSemanal
+                                )
+                            }
+                        }
+                    }
+
+                    // Impacto Ambiental
+                    item {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn() + expandVertically()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "Tu Impacto Ambiental 🌍",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EcoGreenPrimary
+                                )
+
+                                ImpactoAmbientalCard(estadisticas = estadisticas)
+                            }
+                        }
+                    }
+
+                    // Comparativas
+                    item {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "Comparativas",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EcoGreenPrimary
+                                )
+
+                                ComparativasCard(estadisticas = estadisticas)
+                            }
+                        }
+                    }
+
+                    // Rachas
+                    item {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn() + scaleIn()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "Rachas 🔥",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EcoGreenPrimary
+                                )
+
+                                RachasCard(estadisticas = estadisticas)
+                            }
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+            is Resource.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Text(
+                            text = (estadisticasState as Resource.Error).message ?: "Error",
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp
+                        )
+                        Button(onClick = { viewModel.refresh() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Reintentar")
+                        }
+                    }
+                }
+            }
+            else -> {}
         }
     }
 }
 
 @Composable
-fun ResumenGeneralCard(uiState: EstadisticasUiState) {
+fun ResumenGeneralCard(estadisticas: EstadisticasDetalladas) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -268,13 +285,13 @@ fun ResumenGeneralCard(uiState: EstadisticasUiState) {
             ) {
                 ResumenStatItem(
                     icon = Icons.Default.Recycling,
-                    value = "${uiState.totalReciclajes}",
+                    value = "${estadisticas.resumenGeneral.totalReciclajes}",
                     label = "Reciclajes",
                     modifier = Modifier.weight(1f)
                 )
                 ResumenStatItem(
                     icon = Icons.Default.Scale,
-                    value = String.format("%.1f", uiState.totalKgReciclados),
+                    value = String.format("%.1f", estadisticas.resumenGeneral.totalKgReciclados),
                     label = "Kg Total",
                     modifier = Modifier.weight(1f)
                 )
@@ -286,19 +303,19 @@ fun ResumenGeneralCard(uiState: EstadisticasUiState) {
             ) {
                 ResumenStatItem(
                     icon = Icons.Default.TrendingUp,
-                    value = "${uiState.totalEcoCoinsGanados}",
+                    value = "${estadisticas.resumenGeneral.ecoCoinsGanados}",
                     label = "Ganados",
                     modifier = Modifier.weight(1f)
                 )
                 ResumenStatItem(
-                    icon = Icons.Default.ShoppingCart,
-                    value = "${uiState.totalEcoCoinsGastados}",
-                    label = "Gastados",
+                    icon = Icons.Default.EmojiEvents,
+                    value = estadisticas.resumenGeneral.nivel,
+                    label = "Nivel",
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Divider(color = Color.White.copy(alpha = 0.3f))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -307,7 +324,7 @@ fun ResumenGeneralCard(uiState: EstadisticasUiState) {
             ) {
                 Column {
                     Text(
-                        text = "Saldo Actual",
+                        text = "EcoCoins Actuales",
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.9f)
                     )
@@ -322,15 +339,10 @@ fun ResumenGeneralCard(uiState: EstadisticasUiState) {
                             modifier = Modifier.size(24.dp)
                         )
                         Text(
-                            text = "${uiState.saldoActual}",
+                            text = "${estadisticas.resumenGeneral.ecoCoinsActuales}",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
-                        )
-                        Text(
-                            text = "EcoCoins",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.9f)
                         )
                     }
                 }
@@ -373,9 +385,7 @@ fun ResumenStatItem(
 }
 
 @Composable
-fun MaterialesDistribucionCard(
-    materiales: List<EstadisticaMaterial>
-) {
+fun MaterialesDistribucionCard(materiales: List<MaterialStats>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -388,14 +398,12 @@ fun MaterialesDistribucionCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Gráfico de barras circular (simulado con barras de progreso)
             materiales.forEach { material ->
                 MaterialProgressBar(material = material)
             }
 
-            Divider()
+            HorizontalDivider()
 
-            // Detalles numéricos
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -416,7 +424,7 @@ fun MaterialesDistribucionCard(
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = String.format("%.1f kg", materiales.sumOf { it.pesoTotal }),
+                        text = String.format("%.1f kg", materiales.sumOf { it.kgTotales }),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = EcoGreenPrimary
@@ -436,15 +444,10 @@ fun MaterialesDistribucionCard(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "${materiales.sumOf { it.ecoCoinsGanados }}",
+                        text = "${materiales.sumOf { it.ecoCoins }}",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = EcoOrange
-                    )
-                    Text(
-                        text = "EcoCoins",
-                        fontSize = 12.sp,
-                        color = Color(0xFF757575)
                     )
                 }
             }
@@ -453,8 +456,8 @@ fun MaterialesDistribucionCard(
 }
 
 @Composable
-fun MaterialProgressBar(material: EstadisticaMaterial) {
-    val color = getMaterialColor(material.tipoMaterial)
+fun MaterialProgressBar(material: MaterialStats) {
+    val color = getMaterialColor(material.material)
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
@@ -473,7 +476,7 @@ fun MaterialProgressBar(material: EstadisticaMaterial) {
                         .background(color)
                 )
                 Text(
-                    text = material.tipoMaterial,
+                    text = material.material,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF212121)
@@ -489,7 +492,7 @@ fun MaterialProgressBar(material: EstadisticaMaterial) {
         }
 
         LinearProgressIndicator(
-            progress = { material.porcentaje / 100f },
+            progress = { (material.porcentaje / 100f).toFloat() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
@@ -508,7 +511,7 @@ fun MaterialProgressBar(material: EstadisticaMaterial) {
                 color = Color(0xFF757575)
             )
             Text(
-                text = "${String.format("%.1f", material.pesoTotal)} kg",
+                text = "${String.format("%.1f", material.kgTotales)} kg",
                 fontSize = 11.sp,
                 color = Color(0xFF757575)
             )
@@ -517,9 +520,7 @@ fun MaterialProgressBar(material: EstadisticaMaterial) {
 }
 
 @Composable
-fun TendenciaSemanolCard(
-    tendencias: List<DatoTendencia>
-) {
+fun TendenciaSemanolCard(tendencias: List<TendenciaDia>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -532,9 +533,8 @@ fun TendenciaSemanolCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Gráfico de barras simple
             if (tendencias.isNotEmpty()) {
-                val maxCantidad = tendencias.maxOf { it.cantidad }
+                val maxCantidad = tendencias.maxOf { it.reciclajes }
 
                 Row(
                     modifier = Modifier
@@ -552,50 +552,21 @@ fun TendenciaSemanolCard(
                     }
                 }
 
-                Divider()
+                HorizontalDivider()
 
-                // Estadísticas de la semana
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "${tendencias.sumOf { it.cantidad }}",
+                            text = "${tendencias.sumOf { it.reciclajes }}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = EcoGreenPrimary
                         )
                         Text(
                             text = "Reciclajes",
-                            fontSize = 12.sp,
-                            color = Color(0xFF757575)
-                        )
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = String.format("%.1f", tendencias.sumOf { it.pesoKg }),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EcoGreenPrimary
-                        )
-                        Text(
-                            text = "Kg",
-                            fontSize = 12.sp,
-                            color = Color(0xFF757575)
-                        )
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "${tendencias.sumOf { it.ecoCoins }}",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EcoOrange
-                        )
-                        Text(
-                            text = "EcoCoins",
                             fontSize = 12.sp,
                             color = Color(0xFF757575)
                         )
@@ -610,12 +581,12 @@ fun TendenciaSemanolCard(
 
 @Composable
 fun TendenciaBar(
-    dato: DatoTendencia,
+    dato: TendenciaDia,
     maxCantidad: Int,
     modifier: Modifier = Modifier
 ) {
     val heightFraction = if (maxCantidad > 0) {
-        (dato.cantidad.toFloat() / maxCantidad.toFloat()).coerceIn(0.1f, 1f)
+        (dato.reciclajes.toFloat() / maxCantidad.toFloat()).coerceIn(0.1f, 1f)
     } else 0.1f
 
     Column(
@@ -623,17 +594,15 @@ fun TendenciaBar(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Valor
-        if (dato.cantidad > 0) {
+        if (dato.reciclajes > 0) {
             Text(
-                text = "${dato.cantidad}",
+                text = "${dato.reciclajes}",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = EcoGreenPrimary
             )
         }
 
-        // Barra
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -646,9 +615,8 @@ fun TendenciaBar(
                 )
         )
 
-        // Día
         Text(
-            text = dato.fecha.takeLast(2), // Últimos 2 caracteres (día)
+            text = dato.dia.takeLast(2),
             fontSize = 10.sp,
             color = Color(0xFF757575)
         )
@@ -656,7 +624,7 @@ fun TendenciaBar(
 }
 
 @Composable
-fun ImpactoAmbientalCard(uiState: EstadisticasUiState) {
+fun ImpactoAmbientalCard(estadisticas: EstadisticasDetalladas) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -671,39 +639,39 @@ fun ImpactoAmbientalCard(uiState: EstadisticasUiState) {
         ) {
             ImpactoItem(
                 icon = "☁️",
-                title = "CO₂ Ahorrado",
-                value = "${String.format("%.1f", uiState.co2Ahorrado)} kg",
-                description = "Equivalente a ${(uiState.co2Ahorrado / 21).roundToInt()} árboles absorbiendo CO₂ por un día",
+                title = "CO₂ Evitado",
+                value = "${String.format("%.1f", estadisticas.impactoAmbiental.co2Evitado)} kg",
+                description = "Equivalente a ${(estadisticas.impactoAmbiental.co2Evitado / 21).roundToInt()} árboles absorbiendo CO₂ por un día",
                 color = Color(0xFF4CAF50)
             )
 
-            Divider()
+            HorizontalDivider()
 
             ImpactoItem(
                 icon = "🌳",
                 title = "Árboles Equivalentes",
-                value = "${uiState.arbolesEquivalentes}",
-                description = "Has salvado el equivalente a plantar ${uiState.arbolesEquivalentes} árboles",
+                value = "${estadisticas.impactoAmbiental.equivalencias.arboles}",
+                description = "Has salvado el equivalente a plantar ${estadisticas.impactoAmbiental.equivalencias.arboles} árboles",
                 color = Color(0xFF8BC34A)
             )
 
-            Divider()
+            HorizontalDivider()
 
             ImpactoItem(
                 icon = "⚡",
                 title = "Energía Ahorrada",
-                value = "${String.format("%.1f", uiState.energiaAhorrada)} kWh",
-                description = "Suficiente para alimentar una casa por ${(uiState.energiaAhorrada / 30).roundToInt()} días",
+                value = "${String.format("%.1f", estadisticas.impactoAmbiental.equivalencias.energia)} kWh",
+                description = "Suficiente para alimentar una casa por ${(estadisticas.impactoAmbiental.equivalencias.energia / 30).roundToInt()} días",
                 color = Color(0xFFFFC107)
             )
 
-            Divider()
+            HorizontalDivider()
 
             ImpactoItem(
                 icon = "💧",
                 title = "Agua Ahorrada",
-                value = "${String.format("%.0f", uiState.aguaAhorrada)} L",
-                description = "Equivalente a ${(uiState.aguaAhorrada / 200).roundToInt()} duchas de 10 minutos",
+                value = "${String.format("%.0f", estadisticas.impactoAmbiental.equivalencias.agua)} L",
+                description = "Equivalente a ${(estadisticas.impactoAmbiental.equivalencias.agua / 200).roundToInt()} duchas de 10 minutos",
                 color = Color(0xFF2196F3)
             )
         }
@@ -730,10 +698,7 @@ fun ImpactoItem(
                 .background(color.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = icon,
-                fontSize = 24.sp
-            )
+            Text(text = icon, fontSize = 24.sp)
         }
 
         Column(modifier = Modifier.weight(1f)) {
@@ -760,7 +725,7 @@ fun ImpactoItem(
 }
 
 @Composable
-fun ComparativasCard(uiState: EstadisticasUiState) {
+fun ComparativasCard(estadisticas: EstadisticasDetalladas) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -773,118 +738,6 @@ fun ComparativasCard(uiState: EstadisticasUiState) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Tu rendimiento vs promedio
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Tu Rendimiento vs Promedio",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF212121)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Tú: ${String.format("%.1f", uiState.tuRendimiento)} kg",
-                            fontSize = 13.sp,
-                            color = EcoGreenPrimary,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Promedio: ${String.format("%.1f", uiState.promedioUniversidad)} kg",
-                            fontSize = 13.sp,
-                            color = Color(0xFF757575)
-                        )
-                    }
-
-                    val diferencia = ((uiState.tuRendimiento / uiState.promedioUniversidad - 1) * 100).roundToInt()
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (diferencia >= 0) EcoGreenPrimary.copy(alpha = 0.1f) else Color(0xFFE53935).copy(alpha = 0.1f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (diferencia >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                                contentDescription = null,
-                                tint = if (diferencia >= 0) EcoGreenPrimary else Color(0xFFE53935),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "${if (diferencia >= 0) "+" else ""}$diferencia%",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (diferencia >= 0) EcoGreenPrimary else Color(0xFFE53935)
-                            )
-                        }
-                    }
-                }
-
-                // Barra de comparación
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(Color(0xFFE0E0E0))
-                ) {
-                    val yourProgress = (uiState.tuRendimiento / (uiState.tuRendimiento + uiState.promedioUniversidad)).coerceIn(0.0, 1.0)
-
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        // Tu parte
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(yourProgress.toFloat())
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(EcoGreenPrimary, EcoGreenLight)
-                                    ),
-                                    shape = RoundedCornerShape(topStart = 15.dp, bottomStart = 15.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (yourProgress > 0.2) {
-                                Text(
-                                    text = "Tú",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-
-                        // Parte del promedio
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (yourProgress < 0.8) {
-                                Text(
-                                    text = "Promedio",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF757575)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            // Posición general
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -892,13 +745,13 @@ fun ComparativasCard(uiState: EstadisticasUiState) {
             ) {
                 Column {
                     Text(
-                        text = "Tu Posición General",
+                        text = "Tu Posición",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF212121)
                     )
                     Text(
-                        text = "Mejor que el ${uiState.mejorQuePorc}% de usuarios",
+                        text = "Mejor que el ${estadisticas.comparativas.porcentajeSuperior.roundToInt()}% de usuarios",
                         fontSize = 12.sp,
                         color = Color(0xFF757575)
                     )
@@ -913,7 +766,7 @@ fun ComparativasCard(uiState: EstadisticasUiState) {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "#${uiState.posicionGeneral}",
+                            text = "#${estadisticas.comparativas.tuPosicion}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -931,7 +784,7 @@ fun ComparativasCard(uiState: EstadisticasUiState) {
 }
 
 @Composable
-fun RachasCard(uiState: EstadisticasUiState) {
+fun RachasCard(estadisticas: EstadisticasDetalladas) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -944,7 +797,6 @@ fun RachasCard(uiState: EstadisticasUiState) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Racha actual
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -961,10 +813,7 @@ fun RachasCard(uiState: EstadisticasUiState) {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "🔥",
-                        fontSize = 32.sp
-                    )
+                    Text(text = "🔥", fontSize = 32.sp)
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -974,7 +823,7 @@ fun RachasCard(uiState: EstadisticasUiState) {
                         color = Color(0xFF757575)
                     )
                     Text(
-                        text = "${uiState.rachaActual} días",
+                        text = "${estadisticas.rachas.rachaActual} días",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF212121)
@@ -982,62 +831,17 @@ fun RachasCard(uiState: EstadisticasUiState) {
                 }
             }
 
-            Divider()
+            HorizontalDivider()
 
-            // Estadísticas de rachas
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 RachaStatItem(
                     label = "Mejor Racha",
-                    value = "${uiState.mejorRacha}",
+                    value = "${estadisticas.rachas.mejorRacha}",
                     unit = "días"
                 )
-
-                VerticalDivider(modifier = Modifier.height(50.dp))
-
-                RachaStatItem(
-                    label = "Días Activos",
-                    value = "${uiState.diasTotales}",
-                    unit = "total"
-                )
-            }
-
-            // Último reciclaje
-            if (uiState.ultimoReciclaje != null) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = EcoGreenPrimary.copy(alpha = 0.1f)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccessTime,
-                            contentDescription = null,
-                            tint = EcoGreenPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Column {
-                            Text(
-                                text = "Último Reciclaje",
-                                fontSize = 12.sp,
-                                color = Color(0xFF757575)
-                            )
-                            Text(
-                                text = uiState.ultimoReciclaje,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = EcoGreenPrimary
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -1082,10 +886,7 @@ fun EmptyTendenciaMessage() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "📊",
-            fontSize = 48.sp
-        )
+        Text(text = "📊", fontSize = 48.sp)
         Text(
             text = "Sin datos de tendencia",
             fontSize = 14.sp,
@@ -1101,17 +902,8 @@ fun EmptyTendenciaMessage() {
     }
 }
 
-@Composable
-fun VerticalDivider(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .width(1.dp)
-            .background(Color(0xFFE0E0E0))
-    )
-}
-
-fun getMaterialColor(tipoMaterial: String): Color {
-    return when (tipoMaterial.lowercase()) {
+fun getMaterialColor(material: String): Color {
+    return when (material.lowercase()) {
         "plástico", "plastico" -> PlasticoColor
         "papel", "cartón", "carton" -> PapelColor
         "vidrio" -> VidrioColor

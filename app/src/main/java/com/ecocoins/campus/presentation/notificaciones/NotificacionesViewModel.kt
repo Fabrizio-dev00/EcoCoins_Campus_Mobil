@@ -1,130 +1,103 @@
 package com.ecocoins.campus.presentation.notificaciones
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.Notificacion
-import com.ecocoins.campus.data.model.TipoNotificacion
+import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.data.repository.NotificacionesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class NotificacionesViewModel @Inject constructor(
-    // TODO: Inyectar repositorio
+    private val notificacionesRepository: NotificacionesRepository,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(NotificacionesUiState())
-    val uiState: StateFlow<NotificacionesUiState> = _uiState.asStateFlow()
+    private val _notificaciones = MutableLiveData<Resource<List<Notificacion>>>()
+    val notificaciones: LiveData<Resource<List<Notificacion>>> = _notificaciones
 
-    fun loadNotificaciones() {
+    private val _noLeidas = MutableLiveData<Int>()
+    val noLeidas: LiveData<Int> = _noLeidas
+
+    init {
+        cargarNotificaciones()
+        cargarContadorNoLeidas()
+    }
+
+    fun cargarNotificaciones() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _notificaciones.value = Resource.Loading()
+            val usuarioId = userPreferences.getUserId() ?: return@launch
 
-            try {
-                delay(500)
-
-                // MOCK DATA
-                val mockNotificaciones = listOf(
-                    Notificacion(
-                        id = "1",
-                        titulo = "¡Canje listo!",
-                        mensaje = "Tu canje de 'Café Gratis' está listo para recoger",
-                        tipo = TipoNotificacion.CANJE_LISTO,
-                        fecha = "2024-11-27T10:30:00",
-                        leida = false
-                    ),
-                    Notificacion(
-                        id = "2",
-                        titulo = "🏆 ¡Logro desbloqueado!",
-                        mensaje = "Has desbloqueado 'Reciclador Junior' - +100 EcoCoins",
-                        tipo = TipoNotificacion.LOGRO_DESBLOQUEADO,
-                        fecha = "2024-11-27T09:15:00",
-                        leida = false
-                    ),
-                    Notificacion(
-                        id = "3",
-                        titulo = "Nueva recompensa disponible",
-                        mensaje = "¡Nuevo! Descuento 20% en cafetería universitaria",
-                        tipo = TipoNotificacion.NUEVA_RECOMPENSA,
-                        fecha = "2024-11-26T18:00:00",
-                        leida = true
-                    ),
-                    Notificacion(
-                        id = "4",
-                        titulo = "Recordatorio de reciclaje",
-                        mensaje = "¡No olvides reciclar hoy! Mantén tu racha activa",
-                        tipo = TipoNotificacion.RECORDATORIO,
-                        fecha = "2024-11-26T08:00:00",
-                        leida = true
-                    ),
-                    Notificacion(
-                        id = "5",
-                        titulo = "¡Nuevo referido!",
-                        mensaje = "Juan Pérez se unió con tu código - ¡Ganaste 50 EcoCoins!",
-                        tipo = TipoNotificacion.SOCIAL,
-                        fecha = "2024-11-25T14:20:00",
-                        leida = true
-                    )
-                )
-
-                val noLeidas = mockNotificaciones.count { !it.leida }
-
-                _uiState.update {
-                    it.copy(
-                        notificaciones = mockNotificaciones,
-                        noLeidas = noLeidas,
-                        total = mockNotificaciones.size,
-                        isLoading = false
+            when (val result = notificacionesRepository.obtenerNotificaciones(usuarioId)) {
+                is Resource.Success -> {
+                    _notificaciones.value = Resource.Success(result.data ?: emptyList())
+                }
+                is Resource.Error -> {
+                    _notificaciones.value = Resource.Error(
+                        result.message ?: "Error al cargar notificaciones"
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = "Error al cargar notificaciones",
-                        isLoading = false
-                    )
-                }
+                is Resource.Loading -> {}
             }
         }
     }
 
-    fun marcarLeida(id: String) {
+    private fun cargarContadorNoLeidas() {
         viewModelScope.launch {
-            _uiState.update { state ->
-                val notificaciones = state.notificaciones.map {
-                    if (it.id == id) it.copy(leida = true) else it
-                }
-                val noLeidas = notificaciones.count { !it.leida }
+            val usuarioId = userPreferences.getUserId() ?: return@launch
 
-                state.copy(
-                    notificaciones = notificaciones,
-                    noLeidas = noLeidas
-                )
+            when (val result = notificacionesRepository.contarNoLeidas(usuarioId)) {
+                is Resource.Success -> {
+                    _noLeidas.value = result.data ?: 0
+                }
+                is Resource.Error -> {
+                    _noLeidas.value = 0
+                }
+                is Resource.Loading -> {}
             }
         }
     }
 
-    fun marcarTodasLeidas() {
+    fun marcarComoLeida(notificacionId: String) {
         viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(
-                    notificaciones = state.notificaciones.map { it.copy(leida = true) },
-                    noLeidas = 0
-                )
+            when (notificacionesRepository.marcarComoLeida(notificacionId)) {
+                is Resource.Success -> {
+                    cargarNotificaciones()
+                    cargarContadorNoLeidas()
+                }
+                is Resource.Error -> {
+                    // Error silencioso
+                }
+                is Resource.Loading -> {}
             }
         }
+    }
+
+    fun marcarTodasComoLeidas() {
+        viewModelScope.launch {
+            val usuarioId = userPreferences.getUserId() ?: return@launch
+
+            when (notificacionesRepository.marcarTodasComoLeidas(usuarioId)) {
+                is Resource.Success -> {
+                    cargarNotificaciones()
+                    cargarContadorNoLeidas()
+                }
+                is Resource.Error -> {
+                    // Error silencioso
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun refresh() {
+        cargarNotificaciones()
+        cargarContadorNoLeidas()
     }
 }
-
-data class NotificacionesUiState(
-    val notificaciones: List<Notificacion> = emptyList(),
-    val noLeidas: Int = 0,
-    val total: Int = 0,
-    val isLoading: Boolean = false,
-    val error: String? = null
-)

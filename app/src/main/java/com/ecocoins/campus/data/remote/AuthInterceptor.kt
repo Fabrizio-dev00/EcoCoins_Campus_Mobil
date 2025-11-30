@@ -11,43 +11,40 @@ class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Rutas públicas (no requieren token)
+        // Rutas que NO necesitan token
         val publicPaths = listOf(
-            "/api/auth/health",
+            "/api/auth/",
             "/api/recompensas",
-            "/api/estadisticas"
+            "/api/estadisticas",
+            "/api/reciclajes/validar-ia"
         )
 
-        val isPublicPath = publicPaths.any {
-            originalRequest.url.encodedPath.startsWith(it)
-        }
+        val isPublicPath = publicPaths.any { originalRequest.url.encodedPath.contains(it) }
 
-        if (isPublicPath || originalRequest.header("Authorization") != null) {
+        // Si es ruta pública, continuar sin token
+        if (isPublicPath) {
             return chain.proceed(originalRequest)
         }
 
         // Obtener token de Firebase
         val token = runBlocking {
             try {
-                FirebaseAuth.getInstance()
-                    .currentUser
-                    ?.getIdToken(false)
-                    ?.await()
-                    ?.token
+                FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token
             } catch (e: Exception) {
                 null
             }
         }
 
-        if (token == null) {
+        // Si no hay token, continuar sin él (el backend podría responder 401)
+        if (token.isNullOrEmpty()) {
             return chain.proceed(originalRequest)
         }
 
         // Agregar token al header
-        val newRequest = originalRequest.newBuilder()
+        val authenticatedRequest = originalRequest.newBuilder()
             .header("Authorization", "Bearer $token")
             .build()
 
-        return chain.proceed(newRequest)
+        return chain.proceed(authenticatedRequest)
     }
 }

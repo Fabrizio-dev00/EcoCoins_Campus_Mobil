@@ -2,9 +2,10 @@ package com.ecocoins.campus.presentation.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.Reciclaje
+import com.ecocoins.campus.data.model.Resource
 import com.ecocoins.campus.data.repository.ReciclajeRepository
-import com.ecocoins.campus.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ReciclajesHistoryViewModel @Inject constructor(
-    private val reciclajeRepository: ReciclajeRepository
+    private val reciclajeRepository: ReciclajeRepository,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReciclajesHistoryUiState())
@@ -29,9 +31,15 @@ class ReciclajesHistoryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = reciclajeRepository.getUserReciclajes()) {
-                is Result.Success -> {
-                    val reciclajes = result.data
+            val usuarioId = userPreferences.getUserId()
+            if (usuarioId.isNullOrEmpty()) {
+                _uiState.update { it.copy(isLoading = false, error = "Usuario no identificado") }
+                return@launch
+            }
+
+            when (val result = reciclajeRepository.obtenerReciclajesUsuario(usuarioId)) {
+                is Resource.Success -> {
+                    val reciclajes = result.data ?: emptyList()
 
                     // Calcular totales
                     val totalKg = reciclajes.sumOf { it.pesoKg }
@@ -47,7 +55,7 @@ class ReciclajesHistoryViewModel @Inject constructor(
                         )
                     }
                 }
-                is Result.Error -> {
+                is Resource.Error -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -55,7 +63,6 @@ class ReciclajesHistoryViewModel @Inject constructor(
                         )
                     }
                 }
-                else -> {}
             }
         }
     }

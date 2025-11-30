@@ -1,95 +1,76 @@
 package com.ecocoins.campus.data.repository
 
-import com.ecocoins.campus.data.local.UserPreferences
-import com.ecocoins.campus.data.model.*
-import com.ecocoins.campus.data.remote.ApiService
-import com.ecocoins.campus.utils.Result
-import kotlinx.coroutines.flow.first
-import javax.inject.Inject
+import com.ecocoins.campus.data.model.Reciclaje
+import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.data.remote.RetrofitClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class ReciclajeRepository @Inject constructor(
-    private val apiService: ApiService,
-    private val userPreferences: UserPreferences
-) {
+class ReciclajeRepository {
 
-    suspend fun getUserReciclajes(): Result<List<Reciclaje>> {
-        return try {
-            val token = userPreferences.authToken.first() ?: ""
-            val userId = userPreferences.userId.first() ?: ""
-
-            if (token.isEmpty()) {
-                return Result.Error("No hay sesión activa")
-            }
-
-            val response = apiService.getReciclajesByUsuario(userId, "Bearer $token")
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-
-                if (apiResponse.success && apiResponse.data != null) {
-                    Result.Success(apiResponse.data)
-                } else {
-                    Result.Error(apiResponse.message ?: "Error al obtener reciclajes")
-                }
-            } else {
-                Result.Error("Error: ${response.code()} - ${response.message()}")
-            }
-        } catch (e: Exception) {
-            Result.Error("Error de conexión: ${e.localizedMessage}", e)
-        }
-    }
+    private val apiService = RetrofitClient.apiService
 
     suspend fun registrarReciclaje(
-        tipoMaterial: String,
+        usuarioId: String,
+        material: String,
         pesoKg: Double,
-        puntoRecoleccion: String
-    ): Result<Reciclaje> {
-        return try {
-            val token = userPreferences.authToken.first() ?: ""
-            val userId = userPreferences.userId.first() ?: ""
+        ubicacion: String,
+        contenedorId: String
+    ): Resource<Reciclaje> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val reciclajeData = mapOf<String, Any>(
+                    "usuarioId" to usuarioId,
+                    "material" to material,
+                    "pesoKg" to pesoKg,
+                    "ubicacion" to ubicacion,
+                    "contenedorId" to contenedorId
+                )
 
-            if (token.isEmpty()) {
-                return Result.Error("No hay sesión activa")
-            }
+                val response = apiService.registrarReciclaje(reciclajeData)
 
-            val request = ReciclajeRequest(
-                usuarioId = userId,
-                tipoMaterial = tipoMaterial,
-                pesoKg = pesoKg,
-                puntoRecoleccion = puntoRecoleccion
-            )
-
-            val response = apiService.registrarReciclaje("Bearer $token", request)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-
-                if (apiResponse.success && apiResponse.data != null) {
-                    val reciclaje = apiResponse.data
-
-                    val currentCoins = userPreferences.ecoCoins.first()
-                    userPreferences.updateEcoCoins(currentCoins + reciclaje.ecoCoinsGanadas)
-
-                    Result.Success(reciclaje)
+                if (response.success && response.data != null) {
+                    Resource.Success(response.data)
                 } else {
-                    Result.Error(apiResponse.message ?: "Error al registrar reciclaje")
+                    Resource.Error(response.message ?: "Error al registrar reciclaje")
                 }
-            } else {
-                Result.Error("Error: ${response.code()} - ${response.message()}")
+            } catch (e: Exception) {
+                Resource.Error(e.message ?: "Error de conexión")
             }
-        } catch (e: Exception) {
-            Result.Error("Error de conexión: ${e.localizedMessage}", e)
         }
     }
 
-    fun getTiposMateriales(): List<String> = listOf(
-        "Plástico",
-        "Papel",
-        "Vidrio",
-        "Metal",
-        "Cartón",
-        "Electrónico",
-        "Orgánico",
-        "Pilas"
-    )
+    suspend fun obtenerReciclajesUsuario(usuarioId: String): Resource<List<Reciclaje>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.obtenerReciclajesUsuario(usuarioId)
+
+                if (response.success && response.data != null) {
+                    Resource.Success(response.data)
+                } else {
+                    Resource.Error(response.message ?: "Error al obtener reciclajes")
+                }
+            } catch (e: Exception) {
+                Resource.Error(e.message ?: "Error de conexión")
+            }
+        }
+    }
+
+    suspend fun validarConIA(imageBase64: String): Resource<Map<String, Any>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val imageData = mapOf("imagen" to imageBase64)
+
+                val response = apiService.validarConIA(imageData)
+
+                if (response.success && response.data != null) {
+                    Resource.Success(response.data)
+                } else {
+                    Resource.Error(response.message ?: "Error al validar imagen")
+                }
+            } catch (e: Exception) {
+                Resource.Error(e.message ?: "Error de conexión")
+            }
+        }
+    }
 }

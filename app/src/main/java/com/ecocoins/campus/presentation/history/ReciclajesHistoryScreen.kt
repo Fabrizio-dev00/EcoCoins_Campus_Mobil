@@ -514,7 +514,7 @@ fun ReciclajeDetailDialog(
                     }
                 }
 
-                Divider()
+                HorizontalDivider()
 
                 // Imagen si existe
                 reciclaje.fotoUrl?.let { url ->

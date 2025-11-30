@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ecocoins.campus.data.model.Resource
 
 @Composable
 fun LoginScreen(
@@ -28,7 +30,9 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // ✅ CAMBIO: Usar observeAsState() en lugar de collectAsState()
+    val loginState by viewModel.loginState.observeAsState()
+    val isLoggedIn by viewModel.isLoggedIn.observeAsState(false)
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -46,8 +50,9 @@ fun LoginScreen(
         label = "scale"
     )
 
-    LaunchedEffect(uiState.isLoggedIn) {
-        if (uiState.isLoggedIn) {
+    // ✅ CAMBIO: Observar isLoggedIn
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
             onLoginSuccess()
         }
     }
@@ -197,10 +202,12 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = !uiState.isLoading,
+                    // ✅ CAMBIO: Verificar si está cargando
+                    enabled = loginState !is Resource.Loading,
                     shape = MaterialTheme.shapes.large
                 ) {
-                    if (uiState.isLoading) {
+                    // ✅ CAMBIO: Mostrar loading si está en estado Loading
+                    if (loginState is Resource.Loading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -229,9 +236,9 @@ fun LoginScreen(
                 Text("¿No tienes cuenta? Regístrate")
             }
 
-            // Mensaje de error con animación
+            // ✅ CAMBIO: Mostrar error desde loginState
             AnimatedVisibility(
-                visible = uiState.error != null,
+                visible = loginState is Resource.Error,
                 enter = slideInVertically() + fadeIn() + expandVertically(),
                 exit = slideOutVertically() + fadeOut() + shrinkVertically()
             ) {
@@ -255,7 +262,7 @@ fun LoginScreen(
                             tint = MaterialTheme.colorScheme.error
                         )
                         Text(
-                            text = uiState.error ?: "",
+                            text = (loginState as? Resource.Error)?.message ?: "Error desconocido",
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             style = MaterialTheme.typography.bodyMedium
                         )
