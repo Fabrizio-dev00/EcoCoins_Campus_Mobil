@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
 import com.ecocoins.campus.navigation.NavGraph
+import com.ecocoins.campus.navigation.Screen
 import com.ecocoins.campus.ui.theme.EcoCoinsCampusTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -19,13 +21,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             EcoCoinsCampusTheme {
+                val navController = rememberNavController()
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     NavGraph(
-                        navController = TODO(),
-                        startDestination = TODO()
+                        navController = navController,
+                        startDestination = Screen.Login.route
                     )
                 }
             }
