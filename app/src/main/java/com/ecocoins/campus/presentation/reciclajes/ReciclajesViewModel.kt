@@ -1,14 +1,16 @@
 package com.ecocoins.campus.presentation.reciclajes
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.Reciclaje
-import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.utils.Result
 import com.ecocoins.campus.data.repository.ReciclajeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,92 +20,211 @@ class ReciclajesViewModel @Inject constructor(
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val _reciclajes = MutableLiveData<Resource<List<Reciclaje>>>()
-    val reciclajes: LiveData<Resource<List<Reciclaje>>> = _reciclajes
-
-    private val _registrarResult = MutableLiveData<Resource<Reciclaje>>()
-    val registrarResult: LiveData<Resource<Reciclaje>> = _registrarResult
-
-    private val _validacionIA = MutableLiveData<Resource<Map<String, Any>>>()
-    val validacionIA: LiveData<Resource<Map<String, Any>>> = _validacionIA
+    private val _uiState = MutableStateFlow(ReciclajesUiState())
+    val uiState: StateFlow<ReciclajesUiState> = _uiState.asStateFlow()
 
     init {
         cargarReciclajes()
+        cargarTiposMateriales()
     }
 
-    fun cargarReciclajes() {
+    private fun cargarReciclajes() {
         viewModelScope.launch {
-            _reciclajes.value = Resource.Loading()
-            val usuarioId = userPreferences.getUserId() ?: return@launch
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = reciclajeRepository.obtenerReciclajesUsuario(usuarioId)) {
-                is Resource.Success -> {
-                    _reciclajes.value = Resource.Success(result.data ?: emptyList())
-                }
-                is Resource.Error -> {
-                    _reciclajes.value = Resource.Error(
-                        result.message ?: "Error al cargar reciclajes"
+            val usuarioId = userPreferences.getUserId()
+            if (usuarioId.isNullOrEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Usuario no autenticado"
                     )
                 }
-                is Resource.Loading -> {}
+                return@launch
             }
+
+            // ✅ CORREGIDO: When exhaustivo
+            when (val result = reciclajeRepository.obtenerReciclajesUsuario(usuarioId)) {
+                is Result.Success<*> -> {
+                    _uiState.update {
+                        it.copy(
+                            reciclajes = result.data ?: emptyList(),
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                is Result.Loading -> {
+                    // Ya está en loading
+                }
+                else -> {
+                    // Caso por defecto (nunca debería llegar aquí)
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Estado desconocido"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun cargarTiposMateriales() {
+        // Lista de tipos de materiales disponibles
+        _uiState.update {
+            it.copy(
+                tiposMateriales = listOf(
+                    "Plástico",
+                    "Papel",
+                    "Cartón",
+                    "Vidrio",
+                    "Metal",
+                    "Aluminio",
+                    "Electrónicos",
+                    "Orgánicos"
+                )
+            )
         }
     }
 
     fun registrarReciclaje(
         material: String,
         pesoKg: Double,
-        ubicacion: String,
-        contenedorId: String
+        puntoRecoleccion: String
     ) {
         viewModelScope.launch {
-            _registrarResult.value = Resource.Loading()
-            val usuarioId = userPreferences.getUserId() ?: return@launch
+            _uiState.update { it.copy(isRegistrando = true, error = null) }
 
-            when (val result = reciclajeRepository.registrarReciclaje(
-                usuarioId, material, pesoKg, ubicacion, contenedorId
-            )) {
-                is Resource.Success -> {
-                    _registrarResult.value = Resource.Success(result.data!!)
-                    cargarReciclajes()
-                }
-                is Resource.Error -> {
-                    _registrarResult.value = Resource.Error(
-                        result.message ?: "Error al registrar reciclaje"
+            val usuarioId = userPreferences.getUserId()
+            if (usuarioId.isNullOrEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isRegistrando = false,
+                        error = "Usuario no autenticado"
                     )
                 }
-                is Resource.Loading -> {}
+                return@launch
+            }
+
+            // Si tu repository necesita contenedorId, puedes pasarlo como parámetro adicional
+            // Por ahora uso un valor por defecto
+            val contenedorId = "default-container"
+
+            // ✅ CORREGIDO: When exhaustivo
+            when (val result = reciclajeRepository.registrarReciclaje(
+                usuarioId = usuarioId,
+                material = material,
+                pesoKg = pesoKg,
+                ubicacion = puntoRecoleccion,
+                contenedorId = contenedorId
+            )) {
+                is Result.Success<*> -> {
+                    _uiState.update {
+                        it.copy(
+                            isRegistrando = false,
+                            registroExitoso = true,
+                            error = null
+                        )
+                    }
+                    // Recargar lista de reciclajes
+                    cargarReciclajes()
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isRegistrando = false,
+                            error = result.message
+                        )
+                    }
+                }
+                is Result.Loading -> {
+                    // Ya está en isRegistrando
+                }
+                else -> {
+                    // Caso por defecto
+                    _uiState.update {
+                        it.copy(
+                            isRegistrando = false,
+                            error = "Estado desconocido"
+                        )
+                    }
+                }
             }
         }
     }
 
     fun validarConIA(imageBase64: String) {
         viewModelScope.launch {
-            _validacionIA.value = Resource.Loading()
+            _uiState.update { it.copy(isValidando = true, error = null) }
 
+            // ✅ CORREGIDO: When exhaustivo
             when (val result = reciclajeRepository.validarConIA(imageBase64)) {
-                is Resource.Success -> {
-                    _validacionIA.value = Resource.Success(result.data!!)
+                is Result.Success<*> -> {
+                    _uiState.update {
+                        it.copy(
+                            validacionIA = result.data,
+                            isValidando = false,
+                            error = null
+                        )
+                    }
                 }
-                is Resource.Error -> {
-                    _validacionIA.value = Resource.Error(
-                        result.message ?: "Error al validar imagen"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isValidando = false,
+                            error = result.message
+                        )
+                    }
                 }
-                is Resource.Loading -> {}
+                is Result.Loading -> {
+                    // Ya está en isValidando
+                }
+                else -> {
+                    // Caso por defecto
+                    _uiState.update {
+                        it.copy(
+                            isValidando = false,
+                            error = "Estado desconocido"
+                        )
+                    }
+                }
             }
         }
     }
 
-    fun limpiarRegistrarResult() {
-        _registrarResult.value = null
+    fun resetRegistroExitoso() {
+        _uiState.update { it.copy(registroExitoso = false) }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     fun limpiarValidacionIA() {
-        _validacionIA.value = null
+        _uiState.update { it.copy(validacionIA = null) }
     }
 
     fun refresh() {
         cargarReciclajes()
     }
 }
+
+data class ReciclajesUiState(
+    val reciclajes: List<Reciclaje> = emptyList(),
+    val tiposMateriales: List<String> = emptyList(),
+    val validacionIA: Map<String, Any>? = null,
+    val isLoading: Boolean = false,
+    val isRegistrando: Boolean = false,
+    val isValidando: Boolean = false,
+    val registroExitoso: Boolean = false,
+    val error: String? = null
+)

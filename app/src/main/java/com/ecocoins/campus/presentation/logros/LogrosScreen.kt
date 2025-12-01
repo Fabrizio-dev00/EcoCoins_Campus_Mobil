@@ -54,8 +54,9 @@ fun LogrosScreen(
     var selectedCategoria by remember { mutableStateOf<CategoriaLogro?>(null) }
     var selectedLogro by remember { mutableStateOf<Logro?>(null) }
 
+    // ✅ CORREGIDO: Usar refresh() en lugar de loadLogros()
     LaunchedEffect(Unit) {
-        viewModel.loadLogros()
+        viewModel.refresh()
     }
 
     Scaffold(
@@ -113,7 +114,7 @@ fun LogrosScreen(
                         visible = true,
                         enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
                     ) {
-                        ProgresoGeneralCard(
+                        LogrosProgresoGeneralCard(
                             totalDesbloqueados = uiState.totalDesbloqueados,
                             totalLogros = uiState.totalLogros,
                             porcentaje = uiState.porcentajeCompletado
@@ -123,7 +124,7 @@ fun LogrosScreen(
 
                 // Filtro por categoría
                 item {
-                    CategoriaFilterChips(
+                    LogrosCategoriaFilterChips(
                         selectedCategoria = selectedCategoria,
                         onCategoriaSelected = { selectedCategoria = it }
                     )
@@ -154,7 +155,7 @@ fun LogrosScreen(
                 // Mensaje si no hay logros
                 if (logrosFiltrados.isEmpty()) {
                     item {
-                        EmptyLogrosMessage(categoria = selectedCategoria)
+                        LogrosEmptyMessage(categoria = selectedCategoria)
                     }
                 }
 
@@ -196,8 +197,9 @@ fun LogrosScreen(
     }
 }
 
+// ✅ CORREGIDO: Renombrado para evitar conflictos
 @Composable
-fun ProgresoGeneralCard(
+private fun LogrosProgresoGeneralCard(
     totalDesbloqueados: Int,
     totalLogros: Int,
     porcentaje: Int
@@ -295,8 +297,9 @@ fun ProgresoGeneralCard(
     }
 }
 
+// ✅ CORREGIDO: Renombrado para evitar conflictos
 @Composable
-fun CategoriaFilterChips(
+private fun LogrosCategoriaFilterChips(
     selectedCategoria: CategoriaLogro?,
     onCategoriaSelected: (CategoriaLogro?) -> Unit
 ) {
@@ -341,13 +344,13 @@ fun CategoriaFilterChips(
                         onClick = { onCategoriaSelected(categoria) },
                         label = {
                             Text(
-                                text = getCategoriaName(categoria),
+                                text = getLogroCategoriaName(categoria),
                                 fontSize = 13.sp
                             )
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = getCategoriaIcon(categoria),
+                                imageVector = getLogroCategoriaIcon(categoria),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -364,11 +367,11 @@ fun CategoriaFilterChips(
 }
 
 @Composable
-fun LogroCard(
+private fun LogroCard(
     logro: Logro,
     onClick: (Logro) -> Unit
 ) {
-    val rarezaColor = getRarezaColor(logro.rareza)
+    val rarezaColor = getLogroRarezaColor(logro.rareza)
     val progreso = if (logro.objetivo > 0) {
         (logro.progreso.toFloat() / logro.objetivo.toFloat()).coerceIn(0f, 1f)
     } else 0f
@@ -466,7 +469,7 @@ fun LogroCard(
                         color = rarezaColor.copy(alpha = 0.2f)
                     ) {
                         Text(
-                            text = getRarezaName(logro.rareza),
+                            text = getLogroRarezaName(logro.rareza),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = rarezaColor,
@@ -536,11 +539,11 @@ fun LogroCard(
 }
 
 @Composable
-fun LogroDetailDialog(
+private fun LogroDetailDialog(
     logro: Logro,
     onDismiss: () -> Unit
 ) {
-    val rarezaColor = getRarezaColor(logro.rareza)
+    val rarezaColor = getLogroRarezaColor(logro.rareza)
     val progreso = if (logro.objetivo > 0) {
         (logro.progreso.toFloat() / logro.objetivo.toFloat()).coerceIn(0f, 1f)
     } else 0f
@@ -595,7 +598,7 @@ fun LogroDetailDialog(
                     color = rarezaColor.copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = getRarezaName(logro.rareza),
+                        text = getLogroRarezaName(logro.rareza),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = rarezaColor,
@@ -611,7 +614,7 @@ fun LogroDetailDialog(
                     textAlign = TextAlign.Center
                 )
 
-                Divider()
+                HorizontalDivider()
 
                 // Progreso
                 if (!logro.desbloqueado) {
@@ -724,8 +727,9 @@ fun LogroDetailDialog(
     )
 }
 
+// ✅ CORREGIDO: Renombrado para evitar conflictos
 @Composable
-fun EmptyLogrosMessage(categoria: CategoriaLogro?) {
+private fun LogrosEmptyMessage(categoria: CategoriaLogro?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -763,8 +767,10 @@ fun EmptyLogrosMessage(categoria: CategoriaLogro?) {
     }
 }
 
-// Helper functions
-fun getCategoriaName(categoria: CategoriaLogro): String {
+// ========== FUNCIONES HELPER (PRIVADAS) ==========
+
+// ✅ CORREGIDO: Agregar private y renombrar para evitar conflictos
+private fun getLogroCategoriaName(categoria: CategoriaLogro): String {
     return when (categoria) {
         CategoriaLogro.RECICLAJE -> "Reciclaje"
         CategoriaLogro.ECOCOINS -> "EcoCoins"
@@ -774,7 +780,7 @@ fun getCategoriaName(categoria: CategoriaLogro): String {
     }
 }
 
-fun getCategoriaIcon(categoria: CategoriaLogro): ImageVector {
+private fun getLogroCategoriaIcon(categoria: CategoriaLogro): ImageVector {
     return when (categoria) {
         CategoriaLogro.RECICLAJE -> Icons.Default.Recycling
         CategoriaLogro.ECOCOINS -> Icons.Default.Paid
@@ -784,7 +790,7 @@ fun getCategoriaIcon(categoria: CategoriaLogro): ImageVector {
     }
 }
 
-fun getLogroEmoji(categoria: CategoriaLogro): String {
+private fun getLogroEmoji(categoria: CategoriaLogro): String {
     return when (categoria) {
         CategoriaLogro.RECICLAJE -> "♻️"
         CategoriaLogro.ECOCOINS -> "💰"
@@ -794,7 +800,7 @@ fun getLogroEmoji(categoria: CategoriaLogro): String {
     }
 }
 
-fun getRarezaColor(rareza: RarezaLogro): Color {
+private fun getLogroRarezaColor(rareza: RarezaLogro): Color {
     return when (rareza) {
         RarezaLogro.COMUN -> ComunColor
         RarezaLogro.RARO -> RaroColor
@@ -803,7 +809,7 @@ fun getRarezaColor(rareza: RarezaLogro): Color {
     }
 }
 
-fun getRarezaName(rareza: RarezaLogro): String {
+private fun getLogroRarezaName(rareza: RarezaLogro): String {
     return when (rareza) {
         RarezaLogro.COMUN -> "COMÚN"
         RarezaLogro.RARO -> "RARO"

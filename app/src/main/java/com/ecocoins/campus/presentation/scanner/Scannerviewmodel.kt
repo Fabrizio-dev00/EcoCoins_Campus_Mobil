@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.local.UserPreferences
+import com.ecocoins.campus.data.model.TipoMaterial
 import com.ecocoins.campus.data.model.ValidarIARequest
 import com.ecocoins.campus.data.remote.ApiService
 import com.google.firebase.auth.FirebaseAuth
@@ -86,46 +87,42 @@ class ScannerViewModel @Inject constructor(
 
                 // Llamar al backend
                 Log.d("ScannerVM", "📡 Llamando al backend...")
-                val response = apiService.validarMaterialConIA("Bearer $token", request)
+                val apiResponse = apiService.validarMaterialConIA("Bearer $token", request)
 
-                Log.d("ScannerVM", "📡 Response Code: ${response.code()}")
-                Log.d("ScannerVM", "📡 Response Body: ${response.body()}")
+                Log.d("ScannerVM", "📡 Response: $apiResponse")
 
-                if (response.isSuccessful && response.body() != null) {
-                    val apiResponse = response.body()!!
+                // ✅ ADAPTADO: Verificar usando reflection si es necesario
+                // O usar los nombres exactos de tu ApiResponse
 
-                    if (apiResponse.success && apiResponse.data != null) {
-                        val data = apiResponse.data
+                // Si tu ApiResponse usa "success", "data", "message":
+                if (apiResponse.success == true && apiResponse.data != null) {
+                    val data = apiResponse.data
 
-                        if (data.validado) {
-                            // Material validado correctamente
-                            Log.d("ScannerVM", "✅ Material validado: +${data.ecoCoinsGanados} EcoCoins")
+                    if (data.validado) {
+                        // Material validado correctamente
+                        Log.d("ScannerVM", "✅ Material validado: +${data.ecoCoinsGanados} EcoCoins")
 
-                            _validationState.value = ValidationState.Success(
-                                ecoCoinsGanados = data.ecoCoinsGanados,
-                                mensaje = data.mensaje
-                            )
+                        _validationState.value = ValidationState.Success(
+                            ecoCoinsGanados = data.ecoCoinsGanados,
+                            mensaje = data.mensaje
+                        )
 
-                            // Actualizar EcoCoins localmente
-                            val currentCoins = userPreferences.ecoCoins.firstOrNull() ?: 0.0
-                            userPreferences.updateEcoCoins(currentCoins + data.ecoCoinsGanados)
+                        // Actualizar EcoCoins localmente
+                        val currentCoins = userPreferences.ecoCoins.firstOrNull() ?: 0.0
+                        userPreferences.updateEcoCoins(currentCoins + data.ecoCoinsGanados)
 
-                        } else {
-                            // Material rechazado
-                            Log.d("ScannerVM", "❌ Material rechazado: ${data.razon}")
-
-                            _validationState.value = ValidationState.Rejected(
-                                razon = data.razon ?: "El material no coincide con el tipo seleccionado",
-                                materialDetectado = data.materialDetectado
-                            )
-                        }
                     } else {
-                        throw Exception(apiResponse.message ?: "Error en la respuesta del servidor")
+                        // Material rechazado
+                        Log.d("ScannerVM", "❌ Material rechazado: ${data.razon}")
+
+                        _validationState.value = ValidationState.Rejected(
+                            razon = data.razon ?: "El material no coincide con el tipo seleccionado",
+                            materialDetectado = data.materialDetectado
+                        )
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string()
-                    Log.e("ScannerVM", "❌ Error HTTP ${response.code()}: $errorBody")
-                    throw Exception("Error del servidor: ${response.code()}")
+                    // Error en la respuesta
+                    throw Exception(apiResponse.message ?: "Error en la respuesta del servidor")
                 }
 
             } catch (e: Exception) {

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,7 +20,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.utils.Result
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,9 +30,9 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    // ✅ CAMBIO: Usar observeAsState()
-    val registerState by viewModel.registerState.observeAsState()
-    val isLoggedIn by viewModel.isLoggedIn.observeAsState(false)
+    // ✅ CORREGIDO: Usar collectAsState() para StateFlow
+    val registerState by viewModel.registerState.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -41,9 +41,18 @@ fun RegisterScreen(
     var carrera by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             onRegisterSuccess()
+        }
+    }
+
+    // Limpiar estado cuando se desmonta el composable
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearRegisterState()
         }
     }
 
@@ -259,7 +268,6 @@ fun RegisterScreen(
                 ) {
                     Button(
                         onClick = {
-                            // ✅ CAMBIO: Llamar a register con los 4 parámetros necesarios
                             viewModel.register(nombre, email, password)
                         },
                         modifier = Modifier
@@ -267,13 +275,14 @@ fun RegisterScreen(
                             .height(56.dp),
                         enabled = nombre.isNotBlank() &&
                                 email.isNotBlank() &&
+                                carrera.isNotBlank() &&
                                 password.isNotBlank() &&
                                 password.length >= 6 &&
                                 password == confirmPassword &&
-                                registerState !is Resource.Loading,
+                                registerState !is Result.Loading,
                         shape = MaterialTheme.shapes.large
                     ) {
-                        if (registerState is Resource.Loading) {
+                        if (registerState is Result.Loading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = MaterialTheme.colorScheme.onPrimary,
@@ -296,7 +305,7 @@ fun RegisterScreen(
 
                 // Mensaje de error
                 AnimatedVisibility(
-                    visible = registerState is Resource.Error,
+                    visible = registerState is Result.Error,
                     enter = slideInVertically() + expandVertically() + fadeIn(),
                     exit = slideOutVertically() + shrinkVertically() + fadeOut()
                 ) {
@@ -319,12 +328,14 @@ fun RegisterScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                (registerState as? Resource.Error)?.message ?: "Error desconocido",
+                                (registerState as? Result.Error)?.message ?: "Error desconocido",
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

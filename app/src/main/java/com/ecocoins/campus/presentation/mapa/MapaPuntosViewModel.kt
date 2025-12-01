@@ -1,13 +1,15 @@
 package com.ecocoins.campus.presentation.mapa
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.model.PuntoReciclaje
 import com.ecocoins.campus.data.model.Resource
 import com.ecocoins.campus.data.repository.MapaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -16,52 +18,67 @@ class MapaPuntosViewModel @Inject constructor(
     private val mapaRepository: MapaRepository
 ) : ViewModel() {
 
-    private val _puntos = MutableLiveData<Resource<List<PuntoReciclaje>>>()
-    val puntos: LiveData<Resource<List<PuntoReciclaje>>> = _puntos
-
-    private val _puntoSeleccionado = MutableLiveData<PuntoReciclaje?>()
-    val puntoSeleccionado: LiveData<PuntoReciclaje?> = _puntoSeleccionado
-
-    private val _filtroTipo = MutableLiveData<String?>()
-    val filtroTipo: LiveData<String?> = _filtroTipo
-
-    private val _filtroMaterial = MutableLiveData<String?>()
-    val filtroMaterial: LiveData<String?> = _filtroMaterial
+    // ✅ CORREGIDO: Usar StateFlow en lugar de LiveData
+    private val _uiState = MutableStateFlow(MapaPuntosUiState())
+    val uiState: StateFlow<MapaPuntosUiState> = _uiState.asStateFlow()
 
     init {
-        cargarPuntos()
+        loadPuntos()
     }
 
-    fun cargarPuntos(tipo: String? = null, estado: String? = null) {
+    // ✅ CORREGIDO: Renombrado de cargarPuntos() a loadPuntos()
+    fun loadPuntos(tipo: String? = null, estado: String? = null) {
         viewModelScope.launch {
-            _puntos.value = Resource.Loading()
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             when (val result = mapaRepository.obtenerPuntos(tipo, estado)) {
                 is Resource.Success -> {
-                    _puntos.value = Resource.Success(result.data ?: emptyList())
+                    val puntos = result.data ?: emptyList()
+                    _uiState.update {
+                        it.copy(
+                            puntos = puntos,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
                 is Resource.Error -> {
-                    _puntos.value = Resource.Error(
-                        result.message ?: "Error al cargar puntos"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message ?: "Error al cargar puntos"
+                        )
+                    }
                 }
-                is Resource.Loading -> {}
+                is Resource.Loading -> {
+                    // Ya manejado con isLoading
+                }
             }
         }
     }
 
     fun buscarPuntosCercanos(latitud: Double, longitud: Double, radioKm: Double = 5.0) {
         viewModelScope.launch {
-            _puntos.value = Resource.Loading()
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             when (val result = mapaRepository.obtenerPuntosCercanos(latitud, longitud, radioKm)) {
                 is Resource.Success -> {
-                    _puntos.value = Resource.Success(result.data ?: emptyList())
+                    val puntos = result.data ?: emptyList()
+                    _uiState.update {
+                        it.copy(
+                            puntos = puntos,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
                 is Resource.Error -> {
-                    _puntos.value = Resource.Error(
-                        result.message ?: "Error al buscar puntos cercanos"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message ?: "Error al buscar puntos cercanos"
+                        )
+                    }
                 }
                 is Resource.Loading -> {}
             }
@@ -70,17 +87,32 @@ class MapaPuntosViewModel @Inject constructor(
 
     fun filtrarPorMaterial(material: String) {
         viewModelScope.launch {
-            _puntos.value = Resource.Loading()
-            _filtroMaterial.value = material
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    filtroMaterial = material
+                )
+            }
 
             when (val result = mapaRepository.filtrarPorMaterial(material)) {
                 is Resource.Success -> {
-                    _puntos.value = Resource.Success(result.data ?: emptyList())
+                    val puntos = result.data ?: emptyList()
+                    _uiState.update {
+                        it.copy(
+                            puntos = puntos,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
                 is Resource.Error -> {
-                    _puntos.value = Resource.Error(
-                        result.message ?: "Error al filtrar puntos"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message ?: "Error al filtrar puntos"
+                        )
+                    }
                 }
                 is Resource.Loading -> {}
             }
@@ -88,25 +120,43 @@ class MapaPuntosViewModel @Inject constructor(
     }
 
     fun seleccionarPunto(punto: PuntoReciclaje) {
-        _puntoSeleccionado.value = punto
+        _uiState.update { it.copy(puntoSeleccionado = punto) }
     }
 
     fun limpiarSeleccion() {
-        _puntoSeleccionado.value = null
+        _uiState.update { it.copy(puntoSeleccionado = null) }
     }
 
     fun aplicarFiltroTipo(tipo: String?) {
-        _filtroTipo.value = tipo
-        cargarPuntos(tipo = tipo)
+        _uiState.update { it.copy(filtroTipo = tipo) }
+        loadPuntos(tipo = tipo)
     }
 
     fun limpiarFiltros() {
-        _filtroTipo.value = null
-        _filtroMaterial.value = null
-        cargarPuntos()
+        _uiState.update {
+            it.copy(
+                filtroTipo = null,
+                filtroMaterial = null
+            )
+        }
+        loadPuntos()
     }
 
     fun refresh() {
-        cargarPuntos(_filtroTipo.value)
+        loadPuntos(_uiState.value.filtroTipo)
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 }
+
+// ✅ AGREGADO: Clase UiState que faltaba
+data class MapaPuntosUiState(
+    val puntos: List<PuntoReciclaje> = emptyList(),
+    val puntoSeleccionado: PuntoReciclaje? = null,
+    val filtroTipo: String? = null,
+    val filtroMaterial: String? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)

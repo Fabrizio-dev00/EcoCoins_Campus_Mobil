@@ -104,7 +104,7 @@ fun CanjesHistoryScreen(
                         .padding(padding)
                 ) {
                     // Resumen de gastos
-                    ExpenseSummaryCard(
+                    CanjesExpenseSummaryCard(
                         totalCanjes = uiState.canjes.size,
                         totalGastado = uiState.totalEcoCoinsGastados,
                         pendientes = uiState.canjes.count { it.estado == "PENDIENTE" },
@@ -204,7 +204,7 @@ fun CanjesHistoryScreen(
 }
 
 @Composable
-fun ExpenseSummaryCard(
+private fun CanjesExpenseSummaryCard(
     totalCanjes: Int,
     totalGastado: Int,
     pendientes: Int,
@@ -224,7 +224,7 @@ fun ExpenseSummaryCard(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            SummaryItem(
+            CanjesSummaryItem(
                 icon = Icons.Default.ShoppingBag,
                 value = totalCanjes.toString(),
                 label = "Total canjes",
@@ -236,7 +236,7 @@ fun ExpenseSummaryCard(
                 color = Color(0xFFE0E0E0)
             )
 
-            SummaryItem(
+            CanjesSummaryItem(
                 icon = Icons.Default.Paid,
                 value = totalGastado.toString(),
                 label = "Gastados",
@@ -248,7 +248,7 @@ fun ExpenseSummaryCard(
                 color = Color(0xFFE0E0E0)
             )
 
-            SummaryItem(
+            CanjesSummaryItem(
                 icon = Icons.Default.HourglassEmpty,
                 value = pendientes.toString(),
                 label = "Pendientes",
@@ -259,7 +259,7 @@ fun ExpenseSummaryCard(
 }
 
 @Composable
-fun SummaryItem(
+private fun CanjesSummaryItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String,
     label: String,
@@ -291,7 +291,7 @@ fun SummaryItem(
 }
 
 @Composable
-fun CanjeCard(
+private fun CanjeCard(
     canje: Canje,
     onClick: () -> Unit
 ) {
@@ -328,8 +328,8 @@ fun CanjeCard(
                             .background(
                                 Brush.linearGradient(
                                     colors = listOf(
-                                        getEstadoColor(canje.estado),
-                                        getEstadoColor(canje.estado).copy(alpha = 0.7f)
+                                        getCanjeEstadoColor(canje.estado),
+                                        getCanjeEstadoColor(canje.estado).copy(alpha = 0.7f)
                                     )
                                 )
                             ),
@@ -360,7 +360,7 @@ fun CanjeCard(
                 }
 
                 // Estado badge
-                EstadoBadge(estado = canje.estado)
+                CanjeEstadoBadge(estado = canje.estado)
             }
 
             HorizontalDivider(color = Color(0xFFE0E0E0))
@@ -382,7 +382,7 @@ fun CanjeCard(
                             tint = Color(0xFF757575)
                         )
                         Text(
-                            text = formatDate(canje.fechaCanje),
+                            text = formatCanjeDate(canje.fechaCanje),
                             fontSize = 12.sp,
                             color = Color(0xFF757575)
                         )
@@ -400,7 +400,7 @@ fun CanjeCard(
                                 tint = Color(0xFF757575)
                             )
                             Text(
-                                text = "Entrega: ${formatDate(fecha)}",
+                                text = "Entrega: ${formatCanjeDate(fecha)}",
                                 fontSize = 12.sp,
                                 color = Color(0xFF757575)
                             )
@@ -438,7 +438,7 @@ fun CanjeCard(
 }
 
 @Composable
-fun EstadoBadge(estado: String) {
+private fun CanjeEstadoBadge(estado: String) {
     val (color, text, icon) = when (estado) {
         "PENDIENTE" -> Triple(StatusPending, "Pendiente", Icons.Default.HourglassEmpty)
         "COMPLETADO" -> Triple(StatusCompleted, "Completado", Icons.Default.CheckCircle)
@@ -473,7 +473,7 @@ fun EstadoBadge(estado: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CanjeDetailDialog(
+private fun CanjeDetailDialog(
     canje: Canje,
     onDismiss: () -> Unit
 ) {
@@ -518,25 +518,25 @@ fun CanjeDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    EstadoBadge(estado = canje.estado)
+                    CanjeEstadoBadge(estado = canje.estado)
                 }
 
                 // ID del canje
-                DetailRow(
+                CanjeDetailRow(
                     icon = Icons.Default.Tag,
                     label = "ID del Canje",
                     value = canje.id
                 )
 
                 // Recompensa
-                DetailRow(
+                CanjeDetailRow(
                     icon = Icons.Default.CardGiftcard,
                     label = "Recompensa",
                     value = canje.recompensaNombre
                 )
 
                 // Costo
-                DetailRow(
+                CanjeDetailRow(
                     icon = Icons.Default.Paid,
                     label = "Costo",
                     value = "${canje.costoEcoCoins} EcoCoins",
@@ -544,31 +544,31 @@ fun CanjeDetailDialog(
                 )
 
                 // Usuario
-                DetailRow(
+                CanjeDetailRow(
                     icon = Icons.Default.Person,
                     label = "Canjeado por",
                     value = canje.usuarioNombre
                 )
 
                 // Fecha de canje
-                DetailRow(
+                CanjeDetailRow(
                     icon = Icons.Default.CalendarToday,
                     label = "Fecha de canje",
-                    value = formatDateLong(canje.fechaCanje)
+                    value = formatCanjeDateLong(canje.fechaCanje)
                 )
 
                 // Fecha de entrega
                 canje.fechaEntrega?.let { fecha ->
-                    DetailRow(
+                    CanjeDetailRow(
                         icon = Icons.Default.LocalShipping,
                         label = "Fecha de entrega",
-                        value = formatDateLong(fecha)
+                        value = formatCanjeDateLong(fecha)
                     )
                 }
 
                 // Dirección de entrega
                 canje.direccionEntrega?.let { direccion ->
-                    DetailRow(
+                    CanjeDetailRow(
                         icon = Icons.Default.LocationOn,
                         label = "Dirección de entrega",
                         value = direccion
@@ -659,7 +659,7 @@ fun CanjeDetailDialog(
 }
 
 @Composable
-fun DetailRow(
+private fun CanjeDetailRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
@@ -694,7 +694,7 @@ fun DetailRow(
 }
 
 @Composable
-fun EmptyCanjesState(selectedTab: String) {
+private fun EmptyCanjesState(selectedTab: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -739,8 +739,9 @@ fun EmptyCanjesState(selectedTab: String) {
     }
 }
 
-// Helper functions
-fun getEstadoColor(estado: String): Color {
+// ========== FUNCIONES HELPER (PRIVADAS) ==========
+
+private fun getCanjeEstadoColor(estado: String): Color {
     return when (estado) {
         "PENDIENTE" -> StatusPending
         "COMPLETADO" -> StatusCompleted
@@ -749,7 +750,7 @@ fun getEstadoColor(estado: String): Color {
     }
 }
 
-fun formatDate(dateString: String): String {
+private fun formatCanjeDate(dateString: String): String {
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -760,7 +761,7 @@ fun formatDate(dateString: String): String {
     }
 }
 
-fun formatDateLong(dateString: String): String {
+private fun formatCanjeDateLong(dateString: String): String {
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         val outputFormat = SimpleDateFormat("dd 'de' MMMM, yyyy 'a las' HH:mm", Locale("es"))

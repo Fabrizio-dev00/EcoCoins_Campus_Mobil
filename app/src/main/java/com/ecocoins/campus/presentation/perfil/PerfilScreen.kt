@@ -25,8 +25,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.ecocoins.campus.presentation.auth.AuthViewModel
-import com.ecocoins.campus.presentation.dashboard.DashboardViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -45,12 +43,12 @@ fun PerfilScreen(
     onNavigateToMisRecompensas: () -> Unit,
     onNavigateToConfiguracion: () -> Unit,
     onLogout: () -> Unit,
-    dashboardViewModel: DashboardViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
+    viewModel: PerfilViewModel = hiltViewModel()  // ✅ CORREGIDO: Usar PerfilViewModel
 ) {
-    val dashboardState by dashboardViewModel.uiState.collectAsState()
-    val user = dashboardState.user
-    val scope = rememberCoroutineScope()
+    // ✅ CORREGIDO: Usar PerfilViewModel en lugar de DashboardViewModel
+    val uiState by viewModel.uiState.collectAsState()
+    val user = uiState.user
+    val scope = rememberCoroutineScope()  // ✅ CORRECTO: rememberCoroutineScope en lugar de GlobalScope
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -60,7 +58,7 @@ fun PerfilScreen(
         },
         containerColor = BackgroundLight
     ) { padding ->
-        if (dashboardState.isLoading) {
+        if (uiState.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -97,7 +95,7 @@ fun PerfilScreen(
                         visible = true,
                         enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
                     ) {
-                        EcoCoinsLevelCard(
+                        PerfilEcoCoinsLevelCard(
                             ecoCoins = user?.ecoCoins ?: 0,
                             nivel = user?.nivel ?: 1
                         )
@@ -118,7 +116,7 @@ fun PerfilScreen(
                                 color = EcoGreenPrimary
                             )
 
-                            StatsGrid(
+                            PerfilStatsGrid(
                                 totalReciclajes = user?.totalReciclajes ?: 0,
                                 totalKg = user?.totalKgReciclados ?: 0.0
                             )
@@ -158,7 +156,7 @@ fun PerfilScreen(
                         visible = true,
                         enter = slideInVertically(initialOffsetY = { it }) + fadeIn()
                     ) {
-                        LogoutButton(onClick = { showLogoutDialog = true })
+                        PerfilLogoutButton(onClick = { showLogoutDialog = true })
                     }
                 }
 
@@ -171,11 +169,11 @@ fun PerfilScreen(
 
         // Diálogo de confirmación de logout
         if (showLogoutDialog) {
-            LogoutConfirmationDialog(
+            PerfilLogoutConfirmationDialog(
                 onConfirm = {
                     showLogoutDialog = false
-                    scope.launch {
-                        authViewModel.logout()
+                    scope.launch {  // ✅ CORRECTO: scope del rememberCoroutineScope
+                        viewModel.logout()
                         delay(300)
                         onLogout()
                     }
@@ -185,7 +183,7 @@ fun PerfilScreen(
         }
 
         // Mensaje de error
-        dashboardState.error?.let { error ->
+        uiState.error?.let { error ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -196,7 +194,7 @@ fun PerfilScreen(
                     modifier = Modifier.padding(16.dp),
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     action = {
-                        TextButton(onClick = { dashboardViewModel.clearError() }) {
+                        TextButton(onClick = { viewModel.clearError() }) {
                             Text("OK", color = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -210,7 +208,7 @@ fun PerfilScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilTopBar(onNavigateBack: () -> Unit) {
+private fun PerfilTopBar(onNavigateBack: () -> Unit) {
     TopAppBar(
         title = {
             Text(
@@ -236,7 +234,7 @@ fun PerfilTopBar(onNavigateBack: () -> Unit) {
 }
 
 @Composable
-fun PerfilHeader(
+private fun PerfilHeader(
     nombre: String,
     email: String,
     carrera: String
@@ -270,7 +268,7 @@ fun PerfilHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = getInitials(nombre),
+                    text = getPerfilInitials(nombre),
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -328,7 +326,7 @@ fun PerfilHeader(
 }
 
 @Composable
-fun EcoCoinsLevelCard(
+private fun PerfilEcoCoinsLevelCard(
     ecoCoins: Int,
     nivel: Int
 ) {
@@ -383,7 +381,7 @@ fun EcoCoinsLevelCard(
                 }
             }
 
-            Divider(color = Color.White.copy(alpha = 0.3f))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
 
             // Nivel
             Row(
@@ -402,7 +400,7 @@ fun EcoCoinsLevelCard(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        text = "Nivel ${getNivelNombre(nivel)}",
+                        text = "Nivel ${getPerfilNivelNombre(nivel)}",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -418,7 +416,7 @@ fun EcoCoinsLevelCard(
                     color = Color.White.copy(alpha = 0.8f)
                 )
                 LinearProgressIndicator(
-                    progress = { getProgressToNextLevel(ecoCoins) },
+                    progress = { getPerfilProgressToNextLevel(ecoCoins) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
@@ -432,49 +430,51 @@ fun EcoCoinsLevelCard(
 }
 
 @Composable
-fun StatsGrid(
+private fun PerfilStatsGrid(
     totalReciclajes: Int,
     totalKg: Double
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        StatCard(
-            title = "Reciclajes",
-            value = "$totalReciclajes",
-            icon = Icons.Default.Recycling,
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            title = "Kg Reciclados",
-            value = String.format("%.1f", totalKg),
-            icon = Icons.Default.Scale,
-            modifier = Modifier.weight(1f)
-        )
-    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PerfilStatCard(
+                title = "Reciclajes",
+                value = "$totalReciclajes",
+                icon = Icons.Default.Recycling,
+                modifier = Modifier.weight(1f)
+            )
+            PerfilStatCard(
+                title = "Kg Reciclados",
+                value = String.format("%.1f", totalKg),
+                icon = Icons.Default.Scale,
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        StatCard(
-            title = "CO₂ Ahorrado",
-            value = String.format("%.1f", totalKg * 2.5) + " kg",
-            icon = Icons.Default.CloudDone,
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            title = "Árboles",
-            value = "${(totalKg / 10).toInt()}",
-            icon = Icons.Default.Park,
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PerfilStatCard(
+                title = "CO₂ Ahorrado",
+                value = String.format("%.1f", totalKg * 2.5) + " kg",
+                icon = Icons.Default.CloudDone,
+                modifier = Modifier.weight(1f)
+            )
+            PerfilStatCard(
+                title = "Árboles",
+                value = "${(totalKg / 10).toInt()}",
+                icon = Icons.Default.Park,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
 @Composable
-fun StatCard(
+private fun PerfilStatCard(
     title: String,
     value: String,
     icon: ImageVector,
@@ -528,7 +528,7 @@ fun StatCard(
 }
 
 @Composable
-fun PerfilOptionsCard(
+private fun PerfilOptionsCard(
     onEditProfile: () -> Unit,
     onHistorialReciclajes: () -> Unit,
     onMisRecompensas: () -> Unit,
@@ -572,7 +572,7 @@ fun PerfilOptionsCard(
 }
 
 @Composable
-fun PerfilOption(
+private fun PerfilOption(
     title: String,
     icon: ImageVector,
     onClick: () -> Unit,
@@ -585,13 +585,16 @@ fun PerfilOption(
         label = "press"
     )
 
+    // ✅ CORREGIDO: rememberCoroutineScope en lugar de GlobalScope
+    val scope = rememberCoroutineScope()
+
     Column(modifier = Modifier.scale(scale)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
                     isPressed = true
-                    kotlinx.coroutines.GlobalScope.launch {
+                    scope.launch {  // ✅ CORRECTO
                         delay(100)
                         isPressed = false
                         onClick()
@@ -635,7 +638,7 @@ fun PerfilOption(
         }
 
         if (showDivider) {
-            Divider(
+            HorizontalDivider(
                 color = Color(0xFFE0E0E0),
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -644,7 +647,7 @@ fun PerfilOption(
 }
 
 @Composable
-fun LogoutButton(onClick: () -> Unit) {
+private fun PerfilLogoutButton(onClick: () -> Unit) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
@@ -652,10 +655,13 @@ fun LogoutButton(onClick: () -> Unit) {
         label = "press"
     )
 
+    // ✅ CORREGIDO: rememberCoroutineScope en lugar de GlobalScope
+    val scope = rememberCoroutineScope()
+
     Button(
         onClick = {
             isPressed = true
-            kotlinx.coroutines.GlobalScope.launch {
+            scope.launch {  // ✅ CORRECTO
                 delay(100)
                 isPressed = false
                 onClick()
@@ -694,7 +700,7 @@ fun LogoutButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun LogoutConfirmationDialog(
+private fun PerfilLogoutConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -739,8 +745,9 @@ fun LogoutConfirmationDialog(
     )
 }
 
-// Helper functions
-fun getInitials(nombre: String): String {
+// ========== FUNCIONES HELPER (PRIVADAS) ==========
+
+private fun getPerfilInitials(nombre: String): String {
     val parts = nombre.trim().split(" ")
     return when {
         parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
@@ -749,7 +756,7 @@ fun getInitials(nombre: String): String {
     }
 }
 
-fun getNivelNombre(nivel: Int): String {
+private fun getPerfilNivelNombre(nivel: Int): String {
     return when (nivel) {
         1 -> "Bronce 🥉"
         2 -> "Plata 🥈"
@@ -759,7 +766,7 @@ fun getNivelNombre(nivel: Int): String {
     }
 }
 
-fun getProgressToNextLevel(ecoCoins: Int): Float {
+private fun getPerfilProgressToNextLevel(ecoCoins: Int): Float {
     val nextLevelCoins = ((ecoCoins / 1000) + 1) * 1000
     val currentLevelCoins = (ecoCoins / 1000) * 1000
     val progress = (ecoCoins - currentLevelCoins).toFloat() / (nextLevelCoins - currentLevelCoins)

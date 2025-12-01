@@ -2,91 +2,75 @@ package com.ecocoins.campus.data.repository
 
 import com.ecocoins.campus.data.model.CodigoReferidoResponse
 import com.ecocoins.campus.data.model.ReferidosInfo
-import com.ecocoins.campus.data.model.Resource
 import com.ecocoins.campus.data.remote.RetrofitClient
+import com.ecocoins.campus.utils.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class ReferidosRepository {
 
-    private val referidosService = RetrofitClient.referidosService
+    private val apiService = RetrofitClient.referidosService
 
-    suspend fun obtenerReferidos(usuarioId: String): Resource<ReferidosInfo> {
+    suspend fun obtenerReferidos(usuarioId: String): Result<ReferidosInfo> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = referidosService.obtenerReferidos(usuarioId)
+                val response = apiService.obtenerReferidos(usuarioId)
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al obtener referidos")
+                    Result.Error(response.message ?: "Error al obtener referidos")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }
 
-    suspend fun generarCodigo(
-        usuarioId: String,
-        nombre: String
-    ): Resource<CodigoReferidoResponse> {
+    suspend fun generarCodigo(usuarioId: String, nombre: String): Result<CodigoReferidoResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                val userData = mapOf(
+                val data = mapOf(
                     "usuarioId" to usuarioId,
                     "nombre" to nombre
                 )
 
-                val response = referidosService.generarCodigo(userData)
+                // ✅ CORREGIDO: generarCodigo (no generarCodigoReferido)
+                val response = apiService.generarCodigo(data)
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al generar código")
+                    Result.Error(response.message ?: "Error al generar código")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
-            }
-        }
-    }
-
-    suspend fun registrarReferido(
-        codigo: String,
-        nuevoUsuarioId: String
-    ): Resource<Map<String, Any>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val referidoData = mapOf(
-                    "codigo" to codigo,
-                    "nuevoUsuarioId" to nuevoUsuarioId
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
                 )
-
-                val response = referidosService.registrarReferido(referidoData)
-
-                if (response.success && response.data != null) {
-                    Resource.Success(response.data)
-                } else {
-                    Resource.Error(response.message ?: "Error al registrar referido")
-                }
-            } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
             }
         }
     }
 
-    suspend fun validarCodigo(codigo: String): Resource<Map<String, Any>> {
+    suspend fun validarCodigo(codigo: String): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = referidosService.validarCodigo(codigo)
+                // ✅ CORREGIDO: validarCodigo (no validarCodigoReferido)
+                val response = apiService.validarCodigo(codigo)
 
-                if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                if (response.success) {
+                    Result.Success(true)
                 } else {
-                    Resource.Error(response.message ?: "Código inválido")
+                    Result.Error(response.message ?: "Código inválido")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }

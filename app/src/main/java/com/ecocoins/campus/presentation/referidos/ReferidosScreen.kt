@@ -510,9 +510,3 @@ fun ReferidoCard(referido: ReferidoItem) {
         }
     }
 }
-
-data class ReferidoItem(
-    val id: String,
-    val nombre: String,
-    val fechaRegistro: String
-)

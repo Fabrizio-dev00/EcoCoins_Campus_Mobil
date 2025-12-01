@@ -183,9 +183,7 @@ fun NavigationHost(
         // ===== RUTAS FASE 2 - GAMIFICACIÓN =====
 
         composable("ranking") {
-            RankingScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            RankingScreen { navController.popBackStack() }
         }
 
         composable("logros") {

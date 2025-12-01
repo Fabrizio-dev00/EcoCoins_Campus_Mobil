@@ -17,7 +17,10 @@ data class ApiResponse<T>(
     val data: T?,
 
     @SerializedName("timestamp")
-    val timestamp: String?
+    val timestamp: String?,
+
+    @SerializedName("error")
+    val error: String? = null
 )
 
 /**

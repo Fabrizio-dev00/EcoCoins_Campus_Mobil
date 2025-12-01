@@ -31,6 +31,7 @@ class ReciclajesHistoryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
+            // ✅ CORREGIDO: Llamada correcta a función suspendida
             val usuarioId = userPreferences.getUserId()
             if (usuarioId.isNullOrEmpty()) {
                 _uiState.update { it.copy(isLoading = false, error = "Usuario no identificado") }
@@ -62,6 +63,9 @@ class ReciclajesHistoryViewModel @Inject constructor(
                             error = result.message
                         )
                     }
+                }
+                is Resource.Loading -> {
+                    // Ya manejado con isLoading
                 }
             }
         }

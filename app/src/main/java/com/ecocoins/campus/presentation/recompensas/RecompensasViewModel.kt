@@ -1,15 +1,17 @@
 package com.ecocoins.campus.presentation.recompensas
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.local.UserPreferences
 import com.ecocoins.campus.data.model.Canje
 import com.ecocoins.campus.data.model.Recompensa
-import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.utils.Result
 import com.ecocoins.campus.data.repository.RecompensasRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,136 +21,193 @@ class RecompensasViewModel @Inject constructor(
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val _recompensas = MutableLiveData<Resource<List<Recompensa>>>()
-    val recompensas: LiveData<Resource<List<Recompensa>>> = _recompensas
-
-    private val _recompensaSeleccionada = MutableLiveData<Resource<Recompensa>>()
-    val recompensaSeleccionada: LiveData<Resource<Recompensa>> = _recompensaSeleccionada
-
-    private val _canjearResult = MutableLiveData<Resource<Canje>>()
-    val canjearResult: LiveData<Resource<Canje>> = _canjearResult
-
-    private val _canjes = MutableLiveData<Resource<List<Canje>>>()
-    val canjes: LiveData<Resource<List<Canje>>> = _canjes
-
-    private val _canjeSeleccionado = MutableLiveData<Resource<Canje>>()
-    val canjeSeleccionado: LiveData<Resource<Canje>> = _canjeSeleccionado
+    private val _uiState = MutableStateFlow(RecompensasUiState())
+    val uiState: StateFlow<RecompensasUiState> = _uiState.asStateFlow()
 
     init {
         cargarRecompensas()
         cargarCanjes()
     }
 
-    fun cargarRecompensas() {
+    private fun cargarRecompensas() {
         viewModelScope.launch {
-            _recompensas.value = Resource.Loading()
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             when (val result = recompensasRepository.obtenerRecompensas()) {
-                is Resource.Success -> {
-                    _recompensas.value = Resource.Success(result.data ?: emptyList())
+                is Result.Success -> {
+                    // ✅ CORREGIDO: result.data ya es List<Recompensa>, no nullable
+                    _uiState.update {
+                        it.copy(
+                            recompensas = result.data,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
-                is Resource.Error -> {
-                    _recompensas.value = Resource.Error(
-                        result.message ?: "Error al cargar recompensas"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
                 }
-                is Resource.Loading -> {}
+                Result.Loading -> {
+                    // Ya está en loading
+                }
             }
         }
     }
 
     fun cargarRecompensa(recompensaId: String) {
         viewModelScope.launch {
-            _recompensaSeleccionada.value = Resource.Loading()
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             when (val result = recompensasRepository.obtenerRecompensa(recompensaId)) {
-                is Resource.Success -> {
-                    _recompensaSeleccionada.value = Resource.Success(result.data!!)
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            recompensaSeleccionada = result.data,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
-                is Resource.Error -> {
-                    _recompensaSeleccionada.value = Resource.Error(
-                        result.message ?: "Error al cargar recompensa"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
                 }
-                is Resource.Loading -> {}
+                Result.Loading -> {
+                    // Ya está en loading
+                }
             }
         }
     }
 
-    fun canjearRecompensa(recompensaId: String) {
+    fun canjearRecompensa(
+        recompensaId: String,
+        direccion: String? = null,
+        telefono: String? = null
+    ) {
         viewModelScope.launch {
-            _canjearResult.value = Resource.Loading()
-            val usuarioId = userPreferences.getUserId() ?: return@launch
+            _uiState.update { it.copy(isCanjeando = true, error = null) }
 
-            when (val result = recompensasRepository.canjearRecompensa(usuarioId, recompensaId)) {
-                is Resource.Success -> {
-                    _canjearResult.value = Resource.Success(result.data!!)
+            val usuarioId = userPreferences.getUserId()
+            if (usuarioId.isNullOrEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isCanjeando = false,
+                        error = "Usuario no autenticado"
+                    )
+                }
+                return@launch
+            }
+
+            when (val result = recompensasRepository.canjearRecompensa(
+                usuarioId = usuarioId,
+                recompensaId = recompensaId
+            )) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isCanjeando = false,
+                            canjeExitoso = true,
+                            canjeMessage = "¡Recompensa canjeada exitosamente!",
+                            error = null
+                        )
+                    }
+                    // Recargar listas
                     cargarRecompensas()
                     cargarCanjes()
                 }
-                is Resource.Error -> {
-                    _canjearResult.value = Resource.Error(
-                        result.message ?: "Error al canjear recompensa"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isCanjeando = false,
+                            error = result.message
+                        )
+                    }
                 }
-                is Resource.Loading -> {}
+                Result.Loading -> {
+                    // Ya está en isCanjeando
+                }
             }
         }
     }
 
-    fun cargarCanjes(estado: String? = null) {
+    private fun cargarCanjes(estado: String? = null) {
         viewModelScope.launch {
-            _canjes.value = Resource.Loading()
             val usuarioId = userPreferences.getUserId() ?: return@launch
 
             when (val result = recompensasRepository.obtenerCanjesUsuario(usuarioId, estado)) {
-                is Resource.Success -> {
-                    _canjes.value = Resource.Success(result.data ?: emptyList())
+                is Result.Success -> {
+                    // ✅ CORREGIDO: result.data ya es List<Canje>
+                    _uiState.update {
+                        it.copy(canjes = result.data)
+                    }
                 }
-                is Resource.Error -> {
-                    _canjes.value = Resource.Error(
-                        result.message ?: "Error al cargar canjes"
-                    )
+                is Result.Error -> {
+                    // Error silencioso al cargar canjes (no es crítico)
                 }
-                is Resource.Loading -> {}
+                Result.Loading -> {
+                    // No mostramos loading para canjes (es secundario)
+                }
             }
         }
     }
 
     fun cargarCanje(canjeId: String) {
         viewModelScope.launch {
-            _canjeSeleccionado.value = Resource.Loading()
-
             when (val result = recompensasRepository.obtenerCanje(canjeId)) {
-                is Resource.Success -> {
-                    _canjeSeleccionado.value = Resource.Success(result.data!!)
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(canjeSeleccionado = result.data)
+                    }
                 }
-                is Resource.Error -> {
-                    _canjeSeleccionado.value = Resource.Error(
-                        result.message ?: "Error al cargar canje"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(error = result.message)
+                    }
                 }
-                is Resource.Loading -> {}
+                Result.Loading -> {
+                    // Loading ya manejado
+                }
             }
         }
     }
 
-    fun filtrarRecompensasDisponibles(): List<Recompensa> {
-        val todasLasRecompensas = (_recompensas.value as? Resource.Success)?.data ?: emptyList()
-        val ecoCoinsUsuario = userPreferences.getUser()?.ecoCoins ?: 0
+    // ✅ CORREGIDO: getUser() es suspending, debe llamarse en viewModelScope
+    fun filtrarRecompensasDisponibles() {
+        viewModelScope.launch {
+            val todasLasRecompensas = _uiState.value.recompensas
+            val user = userPreferences.getUser()  // ✅ Ahora está dentro de launch
+            val ecoCoinsUsuario = user?.ecoCoins ?: 0
 
-        return todasLasRecompensas.filter {
-            it.disponible && it.stock > 0 && it.precioEcoCoins <= ecoCoinsUsuario
+            val recompensasDisponibles = todasLasRecompensas.filter {
+                it.disponible && it.stock > 0 && it.costoEcocoins <= ecoCoinsUsuario
+            }
+
+            // Actualizar estado con recompensas filtradas si lo necesitas
+            // O simplemente usar para mostrar en UI
         }
     }
 
     fun filtrarCanjesPorEstado(estado: String): List<Canje> {
-        val todosLosCanjes = (_canjes.value as? Resource.Success)?.data ?: emptyList()
-        return todosLosCanjes.filter { it.estado == estado }
+        return _uiState.value.canjes.filter { it.estado == estado }
     }
 
-    fun limpiarCanjearResult() {
-        _canjearResult.value = null
+    fun resetCanjeExitoso() {
+        _uiState.update {
+            it.copy(canjeExitoso = false, canjeMessage = null)
+        }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     fun refresh() {
@@ -156,3 +215,15 @@ class RecompensasViewModel @Inject constructor(
         cargarCanjes()
     }
 }
+
+data class RecompensasUiState(
+    val recompensas: List<Recompensa> = emptyList(),
+    val recompensaSeleccionada: Recompensa? = null,
+    val canjes: List<Canje> = emptyList(),
+    val canjeSeleccionado: Canje? = null,
+    val isLoading: Boolean = false,
+    val isCanjeando: Boolean = false,
+    val canjeExitoso: Boolean = false,
+    val canjeMessage: String? = null,
+    val error: String? = null
+)

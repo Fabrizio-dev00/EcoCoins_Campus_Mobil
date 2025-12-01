@@ -39,9 +39,10 @@ fun NotificacionesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadNotificaciones()
-    }
+    // ✅ Ya no es necesario LaunchedEffect, se carga en init del ViewModel
+    // LaunchedEffect(Unit) {
+    //     viewModel.loadNotificaciones()
+    // }
 
     Scaffold(
         topBar = {
@@ -96,7 +97,7 @@ fun NotificacionesScreen(
                 CircularProgressIndicator(color = EcoGreenPrimary)
             }
         } else if (uiState.notificaciones.isEmpty()) {
-            EmptyNotificacionesState(modifier = Modifier.padding(padding))
+            NotificacionesEmptyState(modifier = Modifier.padding(padding))
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -126,11 +127,32 @@ fun NotificacionesScreen(
                 }
             }
         }
+
+        // Error snackbar
+        uiState.error?.let { error ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Snackbar(
+                    modifier = Modifier.padding(16.dp),
+                    action = {
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(error)
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun NotificacionCard(
+private fun NotificacionCard(
     notificacion: Notificacion,
     onMarcarLeida: (String) -> Unit,
     onClick: (Notificacion) -> Unit
@@ -161,13 +183,13 @@ fun NotificacionCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(getNotificacionColor(notificacion.tipo).copy(alpha = 0.2f)),
+                    .background(getNotifTipoColor(notificacion.tipo).copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = getNotificacionIcon(notificacion.tipo),
+                    imageVector = getNotifTipoIcon(notificacion.tipo),
                     contentDescription = null,
-                    tint = getNotificacionColor(notificacion.tipo),
+                    tint = getNotifTipoColor(notificacion.tipo),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -208,7 +230,7 @@ fun NotificacionCard(
                 )
 
                 Text(
-                    text = formatTiempoRelativo(notificacion.fecha),
+                    text = formatNotifTiempoRelativo(notificacion.fecha),
                     fontSize = 12.sp,
                     color = Color(0xFF9E9E9E)
                 )
@@ -218,7 +240,7 @@ fun NotificacionCard(
 }
 
 @Composable
-fun EmptyNotificacionesState(modifier: Modifier = Modifier) {
+private fun NotificacionesEmptyState(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -250,7 +272,9 @@ fun EmptyNotificacionesState(modifier: Modifier = Modifier) {
     }
 }
 
-fun getNotificacionIcon(tipo: TipoNotificacion): ImageVector {
+// ========== FUNCIONES HELPER (PRIVADAS) ==========
+
+private fun getNotifTipoIcon(tipo: TipoNotificacion): ImageVector {
     return when (tipo) {
         TipoNotificacion.CANJE_LISTO -> Icons.Default.CardGiftcard
         TipoNotificacion.NUEVA_RECOMPENSA -> Icons.Default.NewReleases
@@ -261,7 +285,7 @@ fun getNotificacionIcon(tipo: TipoNotificacion): ImageVector {
     }
 }
 
-fun getNotificacionColor(tipo: TipoNotificacion): Color {
+private fun getNotifTipoColor(tipo: TipoNotificacion): Color {
     return when (tipo) {
         TipoNotificacion.CANJE_LISTO -> Color(0xFF4CAF50)
         TipoNotificacion.NUEVA_RECOMPENSA -> Color(0xFFFF9800)
@@ -272,7 +296,7 @@ fun getNotificacionColor(tipo: TipoNotificacion): Color {
     }
 }
 
-fun formatTiempoRelativo(fecha: String): String {
+private fun formatNotifTiempoRelativo(fecha: String): String {
     return try {
         val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         val date = format.parse(fecha)

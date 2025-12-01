@@ -42,9 +42,10 @@ fun MapaPuntosScreen(
     var selectedPunto by remember { mutableStateOf<PuntoReciclaje?>(null) }
     var showFiltros by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadPuntos()
-    }
+    // ✅ CORREGIDO: Ya no es necesario LaunchedEffect, se carga en init
+    // LaunchedEffect(Unit) {
+    //     viewModel.loadPuntos()
+    // }
 
     Scaffold(
         topBar = {
@@ -143,7 +144,7 @@ fun MapaPuntosScreen(
 
                     if (uiState.puntos.isEmpty()) {
                         item {
-                            EmptyPuntosState()
+                            MapaEmptyPuntosState()
                         }
                     } else {
                         items(uiState.puntos) { punto ->
@@ -151,7 +152,7 @@ fun MapaPuntosScreen(
                                 visible = true,
                                 enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
                             ) {
-                                PuntoReciclajeCard(
+                                MapaPuntoReciclajeCard(
                                     punto = punto,
                                     onClick = { selectedPunto = it },
                                     onNavigate = { /* TODO: Abrir navegación */ }
@@ -169,7 +170,7 @@ fun MapaPuntosScreen(
 
         // Diálogo de detalle
         selectedPunto?.let { punto ->
-            PuntoDetalleDialog(
+            MapaPuntoDetalleDialog(
                 punto = punto,
                 onDismiss = { selectedPunto = null },
                 onNavigate = { /* TODO: Navegar */ }
@@ -182,7 +183,7 @@ fun MapaPuntosScreen(
                 onDismissRequest = { showFiltros = false },
                 containerColor = Color.White
             ) {
-                FiltrosContent(
+                MapaFiltrosContent(
                     onAplicar = {
                         showFiltros = false
                         // TODO: Aplicar filtros
@@ -190,11 +191,32 @@ fun MapaPuntosScreen(
                 )
             }
         }
+
+        // Error snackbar
+        uiState.error?.let { error ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Snackbar(
+                    modifier = Modifier.padding(16.dp),
+                    action = {
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(error)
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun MapaSimuladoView(
+private fun MapaSimuladoView(
     puntos: List<PuntoReciclaje>,
     onPuntoClick: (PuntoReciclaje) -> Unit,
     modifier: Modifier = Modifier
@@ -257,11 +279,11 @@ fun MapaSimuladoView(
                         .align(offset)
                         .clickable { onPuntoClick(punto) }
                         .clip(CircleShape)
-                        .background(getTipoColor(punto.tipo)),
+                        .background(getMapaTipoColor(punto.tipo)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = getTipoIcon(punto.tipo),
+                        imageVector = getMapaTipoIcon(punto.tipo),
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
@@ -318,12 +340,12 @@ fun MapaSimuladoView(
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF757575)
                 )
-                LeyendaItem(
+                MapaLeyendaItem(
                     color = Color(0xFFE53935),
                     texto = "Tú",
                     icono = Icons.Default.MyLocation
                 )
-                LeyendaItem(
+                MapaLeyendaItem(
                     color = EcoGreenPrimary,
                     texto = "Puntos",
                     icono = Icons.Default.Recycling
@@ -334,7 +356,7 @@ fun MapaSimuladoView(
 }
 
 @Composable
-fun LeyendaItem(
+private fun MapaLeyendaItem(
     color: Color,
     texto: String,
     icono: ImageVector
@@ -366,7 +388,7 @@ fun LeyendaItem(
 }
 
 @Composable
-fun PuntoReciclajeCard(
+private fun MapaPuntoReciclajeCard(
     punto: PuntoReciclaje,
     onClick: (PuntoReciclaje) -> Unit,
     onNavigate: () -> Unit
@@ -400,13 +422,13 @@ fun PuntoReciclajeCard(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(getTipoColor(punto.tipo).copy(alpha = 0.2f)),
+                            .background(getMapaTipoColor(punto.tipo).copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = getTipoIcon(punto.tipo),
+                            imageVector = getMapaTipoIcon(punto.tipo),
                             contentDescription = null,
-                            tint = getTipoColor(punto.tipo),
+                            tint = getMapaTipoColor(punto.tipo),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -443,13 +465,13 @@ fun PuntoReciclajeCard(
                 // Estado badge
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = getEstadoColor(punto.estado).copy(alpha = 0.2f)
+                    color = getMapaEstadoColor(punto.estado).copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = getEstadoTexto(punto.estado),
+                        text = getMapaEstadoTexto(punto.estado),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = getEstadoColor(punto.estado),
+                        color = getMapaEstadoColor(punto.estado),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -493,7 +515,7 @@ fun PuntoReciclajeCard(
                 )
             }
 
-            Divider()
+            HorizontalDivider()
 
             // Footer con horario y navegación
             Row(
@@ -578,7 +600,7 @@ fun PuntoReciclajeCard(
 }
 
 @Composable
-fun PuntoDetalleDialog(
+private fun MapaPuntoDetalleDialog(
     punto: PuntoReciclaje,
     onDismiss: () -> Unit,
     onNavigate: () -> Unit
@@ -594,13 +616,13 @@ fun PuntoDetalleDialog(
                 )
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = getTipoColor(punto.tipo).copy(alpha = 0.2f)
+                    color = getMapaTipoColor(punto.tipo).copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = getTipoTexto(punto.tipo),
+                        text = getMapaTipoTexto(punto.tipo),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = getTipoColor(punto.tipo),
+                        color = getMapaTipoColor(punto.tipo),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -611,21 +633,21 @@ fun PuntoDetalleDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Dirección
-                DetalleRow(
+                MapaDetalleRow(
                     icon = Icons.Default.Place,
                     label = "Dirección",
                     value = punto.direccion
                 )
 
                 // Distancia
-                DetalleRow(
+                MapaDetalleRow(
                     icon = Icons.Default.LocationOn,
                     label = "Distancia",
                     value = "${String.format("%.1f", punto.distanciaKm)} km"
                 )
 
                 // Horario
-                DetalleRow(
+                MapaDetalleRow(
                     icon = Icons.Default.Schedule,
                     label = "Horario",
                     value = punto.horario
@@ -663,7 +685,7 @@ fun PuntoDetalleDialog(
 
                 // Teléfono
                 punto.telefono?.let { telefono ->
-                    DetalleRow(
+                    MapaDetalleRow(
                         icon = Icons.Default.Phone,
                         label = "Teléfono",
                         value = telefono
@@ -684,13 +706,13 @@ fun PuntoDetalleDialog(
                     )
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = getEstadoColor(punto.estado).copy(alpha = 0.2f)
+                        color = getMapaEstadoColor(punto.estado).copy(alpha = 0.2f)
                     ) {
                         Text(
-                            text = getEstadoTexto(punto.estado),
+                            text = getMapaEstadoTexto(punto.estado),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = getEstadoColor(punto.estado),
+                            color = getMapaEstadoColor(punto.estado),
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
@@ -723,7 +745,7 @@ fun PuntoDetalleDialog(
 }
 
 @Composable
-fun DetalleRow(
+private fun MapaDetalleRow(
     icon: ImageVector,
     label: String,
     value: String
@@ -755,7 +777,7 @@ fun DetalleRow(
 }
 
 @Composable
-fun FiltrosContent(
+private fun MapaFiltrosContent(
     onAplicar: () -> Unit
 ) {
     Column(
@@ -790,20 +812,20 @@ fun FiltrosContent(
                     onCheckedChange = { }
                 )
                 Icon(
-                    imageVector = getTipoIcon(tipo),
+                    imageVector = getMapaTipoIcon(tipo),
                     contentDescription = null,
-                    tint = getTipoColor(tipo),
+                    tint = getMapaTipoColor(tipo),
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = getTipoTexto(tipo),
+                    text = getMapaTipoTexto(tipo),
                     fontSize = 14.sp,
                     color = Color(0xFF212121)
                 )
             }
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Solo abiertos
         Row(
@@ -856,7 +878,7 @@ fun FiltrosContent(
 }
 
 @Composable
-fun EmptyPuntosState() {
+private fun MapaEmptyPuntosState() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -893,8 +915,9 @@ fun EmptyPuntosState() {
     }
 }
 
-// Helper functions
-fun getTipoIcon(tipo: TipoPuntoReciclaje): ImageVector {
+// ========== FUNCIONES HELPER (PRIVADAS) ==========
+
+private fun getMapaTipoIcon(tipo: TipoPuntoReciclaje): ImageVector {
     return when (tipo) {
         TipoPuntoReciclaje.CONTENEDOR -> Icons.Default.Delete
         TipoPuntoReciclaje.CENTRO_ACOPIO -> Icons.Default.Warehouse
@@ -903,7 +926,7 @@ fun getTipoIcon(tipo: TipoPuntoReciclaje): ImageVector {
     }
 }
 
-fun getTipoColor(tipo: TipoPuntoReciclaje): Color {
+private fun getMapaTipoColor(tipo: TipoPuntoReciclaje): Color {
     return when (tipo) {
         TipoPuntoReciclaje.CONTENEDOR -> Color(0xFF2196F3)
         TipoPuntoReciclaje.CENTRO_ACOPIO -> Color(0xFF4CAF50)
@@ -912,7 +935,7 @@ fun getTipoColor(tipo: TipoPuntoReciclaje): Color {
     }
 }
 
-fun getTipoTexto(tipo: TipoPuntoReciclaje): String {
+private fun getMapaTipoTexto(tipo: TipoPuntoReciclaje): String {
     return when (tipo) {
         TipoPuntoReciclaje.CONTENEDOR -> "Contenedor"
         TipoPuntoReciclaje.CENTRO_ACOPIO -> "Centro de Acopio"
@@ -921,7 +944,7 @@ fun getTipoTexto(tipo: TipoPuntoReciclaje): String {
     }
 }
 
-fun getEstadoColor(estado: EstadoPunto): Color {
+private fun getMapaEstadoColor(estado: EstadoPunto): Color {
     return when (estado) {
         EstadoPunto.ABIERTO -> Color(0xFF4CAF50)
         EstadoPunto.CERRADO -> Color(0xFF757575)
@@ -929,7 +952,7 @@ fun getEstadoColor(estado: EstadoPunto): Color {
     }
 }
 
-fun getEstadoTexto(estado: EstadoPunto): String {
+private fun getMapaEstadoTexto(estado: EstadoPunto): String {
     return when (estado) {
         EstadoPunto.ABIERTO -> "ABIERTO"
         EstadoPunto.CERRADO -> "CERRADO"

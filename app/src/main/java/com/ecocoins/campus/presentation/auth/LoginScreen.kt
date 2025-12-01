@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ecocoins.campus.data.model.Resource
 
+
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,

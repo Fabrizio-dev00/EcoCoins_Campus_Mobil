@@ -9,6 +9,7 @@ import com.ecocoins.campus.data.model.Resource
 import com.ecocoins.campus.data.model.User
 import com.ecocoins.campus.data.repository.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,10 +36,16 @@ class DashboardViewModel @Inject constructor(
         cargarEstadisticasRapidas()
     }
 
+    // ✅ CORREGIDO: Usar Flow de UserPreferences
     private fun cargarUsuario() {
-        _currentUser.value = userPreferences.getUser()
+        viewModelScope.launch {
+            userPreferences.user.collectLatest { user ->
+                _currentUser.value = user
+            }
+        }
     }
 
+    // ✅ CORREGIDO: Método suspendido para obtener userId
     private fun cargarNotificacionesNoLeidas() {
         viewModelScope.launch {
             val usuarioId = userPreferences.getUserId() ?: return@launch
@@ -55,6 +62,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    // ✅ CORREGIDO: Método suspendido
     private fun cargarEstadisticasRapidas() {
         viewModelScope.launch {
             val usuarioId = userPreferences.getUserId() ?: return@launch
@@ -65,17 +73,20 @@ class DashboardViewModel @Inject constructor(
                     val totalReciclajes = reciclajes.data?.size ?: 0
                     val totalKg = reciclajes.data?.sumOf { it.pesoKg } ?: 0.0
 
+                    val user = userPreferences.getUser()
+
                     _estadisticasRapidas.value = mapOf(
                         "totalReciclajes" to totalReciclajes,
                         "totalKg" to totalKg,
-                        "ecoCoins" to (userPreferences.getUser()?.ecoCoins ?: 0)
+                        "ecoCoins" to (user?.ecoCoins ?: 0)
                     )
                 }
                 else -> {
+                    val user = userPreferences.getUser()
                     _estadisticasRapidas.value = mapOf(
                         "totalReciclajes" to 0,
                         "totalKg" to 0.0,
-                        "ecoCoins" to (userPreferences.getUser()?.ecoCoins ?: 0)
+                        "ecoCoins" to (user?.ecoCoins ?: 0)
                     )
                 }
             }
@@ -95,8 +106,11 @@ class DashboardViewModel @Inject constructor(
         cargarEstadisticasRapidas()
     }
 
+    // ✅ CORREGIDO: Ahora es suspendido
     fun actualizarUsuario(user: User) {
-        userPreferences.saveUser(user)
-        _currentUser.value = user
+        viewModelScope.launch {
+            userPreferences.saveUser(user)
+            _currentUser.value = user
+        }
     }
 }

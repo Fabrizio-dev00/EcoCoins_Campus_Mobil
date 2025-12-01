@@ -1,10 +1,13 @@
 package com.ecocoins.campus.data.remote
 
+import androidx.camera.core.ImageProcessor.Response
 import com.ecocoins.campus.data.model.ApiResponse
 import com.ecocoins.campus.data.model.Canje
 import com.ecocoins.campus.data.model.Reciclaje
 import com.ecocoins.campus.data.model.Recompensa
 import com.ecocoins.campus.data.model.User
+import com.ecocoins.campus.data.model.ValidarIARequest
+import com.ecocoins.campus.data.model.ValidarIAResponse
 import retrofit2.http.*
 
 interface ApiService {
@@ -78,4 +81,11 @@ interface ApiService {
     suspend fun obtenerCanje(
         @Path("id") canjeId: String
     ): ApiResponse<Canje>
+
+
+    @POST("api/validar-material-ia")
+    suspend fun validarMaterialConIA(
+        @Header("Authorization") token: String,
+        @Body request: ValidarIARequest
+    ): Response<ApiResponse<ValidarIAResponse>>
 }

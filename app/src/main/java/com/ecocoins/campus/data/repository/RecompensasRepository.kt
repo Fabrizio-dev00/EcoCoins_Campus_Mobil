@@ -2,7 +2,7 @@ package com.ecocoins.campus.data.repository
 
 import com.ecocoins.campus.data.model.Canje
 import com.ecocoins.campus.data.model.Recompensa
-import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.utils.Result
 import com.ecocoins.campus.data.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -11,34 +11,40 @@ class RecompensasRepository {
 
     private val apiService = RetrofitClient.apiService
 
-    suspend fun obtenerRecompensas(): Resource<List<Recompensa>> {
+    suspend fun obtenerRecompensas(): Result<List<Recompensa>> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.obtenerRecompensas()
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al obtener recompensas")
+                    Result.Error(response.message ?: "Error al obtener recompensas")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }
 
-    suspend fun obtenerRecompensa(recompensaId: String): Resource<Recompensa> {
+    suspend fun obtenerRecompensa(recompensaId: String): Result<Recompensa> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.obtenerRecompensa(recompensaId)
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al obtener recompensa")
+                    Result.Error(response.message ?: "Error al obtener recompensa")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }
@@ -46,7 +52,7 @@ class RecompensasRepository {
     suspend fun canjearRecompensa(
         usuarioId: String,
         recompensaId: String
-    ): Resource<Canje> {
+    ): Result<Canje> {
         return withContext(Dispatchers.IO) {
             try {
                 val canjeData = mapOf(
@@ -57,12 +63,15 @@ class RecompensasRepository {
                 val response = apiService.canjearRecompensa(canjeData)
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al canjear recompensa")
+                    Result.Error(response.message ?: "Error al canjear recompensa")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }
@@ -70,34 +79,40 @@ class RecompensasRepository {
     suspend fun obtenerCanjesUsuario(
         usuarioId: String,
         estado: String? = null
-    ): Resource<List<Canje>> {
+    ): Result<List<Canje>> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.obtenerCanjesUsuario(usuarioId, estado)
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al obtener canjes")
+                    Result.Error(response.message ?: "Error al obtener canjes")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }
 
-    suspend fun obtenerCanje(canjeId: String): Resource<Canje> {
+    suspend fun obtenerCanje(canjeId: String): Result<Canje> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.obtenerCanje(canjeId)
 
                 if (response.success && response.data != null) {
-                    Resource.Success(response.data)
+                    Result.Success(response.data)
                 } else {
-                    Resource.Error(response.message ?: "Error al obtener canje")
+                    Result.Error(response.message ?: "Error al obtener canje")
                 }
             } catch (e: Exception) {
-                Resource.Error(e.message ?: "Error de conexión")
+                Result.Error(
+                    message = e.message ?: "Error de conexión",
+                    exception = e
+                )
             }
         }
     }

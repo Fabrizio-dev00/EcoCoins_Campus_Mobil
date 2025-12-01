@@ -85,8 +85,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(): AuthRepository {
-        return AuthRepository()
+    fun provideAuthRepository(
+        userPreferences: UserPreferences
+    ): AuthRepository {
+        return AuthRepository(userPreferences)
     }
 
     @Provides

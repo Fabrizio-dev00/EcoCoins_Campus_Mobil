@@ -20,23 +20,24 @@ class EducacionViewModel @Inject constructor(
     private val _contenidos = MutableLiveData<Resource<List<ContenidoEducativo>>>()
     val contenidos: LiveData<Resource<List<ContenidoEducativo>>> = _contenidos
 
-    private val _contenidoSeleccionado = MutableLiveData<Resource<ContenidoEducativo>>()
-    val contenidoSeleccionado: LiveData<Resource<ContenidoEducativo>> = _contenidoSeleccionado
+    private val _contenidoSeleccionado = MutableLiveData<Resource<ContenidoEducativo>?>()
+    val contenidoSeleccionado: LiveData<Resource<ContenidoEducativo>?> = _contenidoSeleccionado
 
-    private val _progreso = MutableLiveData<Resource<ProgresoEducativo>>()
-    val progreso: LiveData<Resource<ProgresoEducativo>> = _progreso
+    private val _progreso = MutableLiveData<Resource<ProgresoEducativo>?>()
+    val progreso: LiveData<Resource<ProgresoEducativo>?> = _progreso
 
     private val _categorias = MutableLiveData<Resource<List<CategoriaEducativa>>>()
     val categorias: LiveData<Resource<List<CategoriaEducativa>>> = _categorias
 
-    private val _quiz = MutableLiveData<Resource<Quiz>>()
-    val quiz: LiveData<Resource<Quiz>> = _quiz
+    private val _quiz = MutableLiveData<Resource<Quiz>?>()
+    val quiz: LiveData<Resource<Quiz>?> = _quiz
 
-    private val _resultadoQuiz = MutableLiveData<Resource<ResultadoQuiz>>()
-    val resultadoQuiz: LiveData<Resource<ResultadoQuiz>> = _resultadoQuiz
+    // ✅ CORREGIDO: Ahora es nullable
+    private val _resultadoQuiz = MutableLiveData<Resource<ResultadoQuiz>?>()
+    val resultadoQuiz: LiveData<Resource<ResultadoQuiz>?> = _resultadoQuiz
 
-    private val _completarContenido = MutableLiveData<Resource<Map<String, Any>>>()
-    val completarContenido: LiveData<Resource<Map<String, Any>>> = _completarContenido
+    private val _completarContenido = MutableLiveData<Resource<Map<String, Any>>?>()
+    val completarContenido: LiveData<Resource<Map<String, Any>>?> = _completarContenido
 
     private val _filtroCategoria = MutableLiveData<String?>()
     val filtroCategoria: LiveData<String?> = _filtroCategoria
@@ -76,7 +77,12 @@ class EducacionViewModel @Inject constructor(
 
             when (val result = educacionRepository.obtenerContenido(contenidoId)) {
                 is Resource.Success -> {
-                    _contenidoSeleccionado.value = Resource.Success(result.data!!)
+                    // ✅ MEJORADO: Manejo seguro de null
+                    result.data?.let {
+                        _contenidoSeleccionado.value = Resource.Success(it)
+                    } ?: run {
+                        _contenidoSeleccionado.value = Resource.Error("Contenido no encontrado")
+                    }
                 }
                 is Resource.Error -> {
                     _contenidoSeleccionado.value = Resource.Error(
@@ -95,7 +101,11 @@ class EducacionViewModel @Inject constructor(
 
             when (val result = educacionRepository.obtenerProgreso(usuarioId)) {
                 is Resource.Success -> {
-                    _progreso.value = Resource.Success(result.data!!)
+                    result.data?.let {
+                        _progreso.value = Resource.Success(it)
+                    } ?: run {
+                        _progreso.value = Resource.Error("No se pudo obtener el progreso")
+                    }
                 }
                 is Resource.Error -> {
                     _progreso.value = Resource.Error(
@@ -114,7 +124,9 @@ class EducacionViewModel @Inject constructor(
 
             when (val result = educacionRepository.completarContenido(usuarioId, contenidoId)) {
                 is Resource.Success -> {
-                    _completarContenido.value = Resource.Success(result.data!!)
+                    result.data?.let {
+                        _completarContenido.value = Resource.Success(it)
+                    }
                     cargarProgreso()
                     cargarContenidos(_filtroCategoria.value, _filtroTipo.value)
                 }
@@ -134,7 +146,11 @@ class EducacionViewModel @Inject constructor(
 
             when (val result = educacionRepository.obtenerQuiz(quizId)) {
                 is Resource.Success -> {
-                    _quiz.value = Resource.Success(result.data!!)
+                    result.data?.let {
+                        _quiz.value = Resource.Success(it)
+                    } ?: run {
+                        _quiz.value = Resource.Error("Quiz no encontrado")
+                    }
                 }
                 is Resource.Error -> {
                     _quiz.value = Resource.Error(
@@ -153,7 +169,11 @@ class EducacionViewModel @Inject constructor(
 
             when (val result = educacionRepository.enviarQuiz(usuarioId, quizId, respuestas)) {
                 is Resource.Success -> {
-                    _resultadoQuiz.value = Resource.Success(result.data!!)
+                    result.data?.let {
+                        _resultadoQuiz.value = Resource.Success(it)
+                    } ?: run {
+                        _resultadoQuiz.value = Resource.Error("No se pudo procesar el resultado")
+                    }
                     cargarProgreso()
                 }
                 is Resource.Error -> {
@@ -194,8 +214,17 @@ class EducacionViewModel @Inject constructor(
         cargarContenidos(categoria = null, tipo = null)
     }
 
+    // ✅ CORREGIDO: Ahora puede asignar null
     fun limpiarResultadoQuiz() {
         _resultadoQuiz.value = null
+    }
+
+    fun limpiarQuiz() {
+        _quiz.value = null
+    }
+
+    fun limpiarContenidoSeleccionado() {
+        _contenidoSeleccionado.value = null
     }
 
     fun refresh() {

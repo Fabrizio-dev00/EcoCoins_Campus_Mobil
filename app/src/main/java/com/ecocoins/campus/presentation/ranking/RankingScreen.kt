@@ -17,7 +17,8 @@ import com.ecocoins.campus.data.model.Resource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RankingScreen(
-    viewModel: RankingViewModel = hiltViewModel() // ✅ Inyección con Hilt
+    viewModel: RankingViewModel = hiltViewModel(), // ✅ Inyección con Hilt
+    onNavigateBack: () -> Boolean
 ) {
     val rankingState by viewModel.rankingList.observeAsState()
     val periodoSeleccionado by viewModel.periodoSeleccionado.observeAsState("SEMANAL")

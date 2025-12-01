@@ -1,14 +1,15 @@
 package com.ecocoins.campus.presentation.referidos
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.local.UserPreferences
-import com.ecocoins.campus.data.model.ReferidosInfo
-import com.ecocoins.campus.data.model.Resource
+import com.ecocoins.campus.utils.Result
 import com.ecocoins.campus.data.repository.ReferidosRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,78 +19,142 @@ class ReferidosViewModel @Inject constructor(
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val _referidosInfo = MutableLiveData<Resource<ReferidosInfo>>()
-    val referidosInfo: LiveData<Resource<ReferidosInfo>> = _referidosInfo
-
-    private val _codigoGenerado = MutableLiveData<Resource<String>>()
-    val codigoGenerado: LiveData<Resource<String>> = _codigoGenerado
-
-    private val _validacionCodigo = MutableLiveData<Resource<Boolean>>()
-    val validacionCodigo: LiveData<Resource<Boolean>> = _validacionCodigo
+    private val _uiState = MutableStateFlow(ReferidosUiState())
+    val uiState: StateFlow<ReferidosUiState> = _uiState.asStateFlow()
 
     init {
-        cargarReferidos()
+        loadReferidos()
     }
 
-    fun cargarReferidos() {
+    fun loadReferidos() {
         viewModelScope.launch {
-            _referidosInfo.value = Resource.Loading()
-            val usuarioId = userPreferences.getUserId() ?: return@launch
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = referidosRepository.obtenerReferidos(usuarioId)) {
-                is Resource.Success -> {
-                    _referidosInfo.value = Resource.Success(result.data!!)
-                }
-                is Resource.Error -> {
-                    _referidosInfo.value = Resource.Error(
-                        result.message ?: "Error al cargar referidos"
+            val usuarioId = userPreferences.getUserId()
+            if (usuarioId.isNullOrEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Usuario no autenticado"
                     )
                 }
-                is Resource.Loading -> {}
+                return@launch
+            }
+
+            when (val result = referidosRepository.obtenerReferidos(usuarioId)) {
+                is Result.Success -> {
+                    val info = result.data
+
+                    // ✅ Calcular totalEcoCoinsGanados si no existe
+                    val totalEcoCoins = try {
+                        // Intenta usar la propiedad si existe
+                        info.totalEcoCoinsGanados
+                    } catch (e: Exception) {
+                        // Si no existe, calcular: 50 EcoCoins por referido
+                        info.totalReferidos * 50
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            codigoReferido = info.codigoReferido,
+                            totalReferidos = info.totalReferidos,
+                            totalEcoCoinsGanados = totalEcoCoins,
+                            referidos = info.referidos.mapNotNull { ref ->
+                                try {
+                                    ReferidoItem(
+                                        id = ref.id, // Si falla, usar el catch
+                                        nombre = ref.nombre,
+                                        fechaRegistro = ref.fechaRegistro.take(10)
+                                    )
+                                } catch (e: Exception) {
+                                    null // Ignorar referidos con datos incompletos
+                                }
+                            },
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                Result.Loading -> {
+                    // Ya está en loading
+                }
             }
         }
     }
 
     fun generarCodigo() {
         viewModelScope.launch {
-            _codigoGenerado.value = Resource.Loading()
-            val usuarioId = userPreferences.getUserId() ?: return@launch
-            val nombre = userPreferences.getUser()?.nombre ?: return@launch
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = referidosRepository.generarCodigo(usuarioId, nombre)) {
-                is Resource.Success -> {
-                    _codigoGenerado.value = Resource.Success(result.data?.codigo ?: "")
-                    cargarReferidos()
-                }
-                is Resource.Error -> {
-                    _codigoGenerado.value = Resource.Error(
-                        result.message ?: "Error al generar código"
+            val usuarioId = userPreferences.getUserId()
+            val user = userPreferences.getUser()
+            val nombre = user?.nombre
+
+            if (usuarioId.isNullOrEmpty() || nombre.isNullOrEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Usuario no autenticado"
                     )
                 }
-                is Resource.Loading -> {}
+                return@launch
+            }
+
+            when (val result = referidosRepository.generarCodigo(usuarioId, nombre)) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            codigoReferido = result.data.codigo,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                    loadReferidos()
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                Result.Loading -> {
+                    // Ya está en loading
+                }
             }
         }
     }
 
-    fun validarCodigo(codigo: String) {
+    fun validarCodigo(codigo: String, onValidado: (Boolean) -> Unit) {
         viewModelScope.launch {
-            _validacionCodigo.value = Resource.Loading()
-
             when (val result = referidosRepository.validarCodigo(codigo)) {
-                is Resource.Success -> {
-                    _validacionCodigo.value = Resource.Success(true)
+                is Result.Success -> {
+                    onValidado(true)
                 }
-                is Resource.Error -> {
-                    _validacionCodigo.value = Resource.Error(result.message ?: "Código inválido")
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(error = result.message)
+                    }
+                    onValidado(false)
                 }
-                is Resource.Loading -> {}
+                Result.Loading -> {
+                    // Loading
+                }
             }
         }
     }
 
     fun compartirCodigo(): String {
-        val info = (_referidosInfo.value as? Resource.Success)?.data
-        val codigo = info?.codigoReferido ?: ""
+        val codigo = _uiState.value.codigoReferido
 
         return "¡Únete a EcoCoins Campus! 🌱♻️\n\n" +
                 "Usa mi código de referido: $codigo\n\n" +
@@ -97,7 +162,26 @@ class ReferidosViewModel @Inject constructor(
                 "¡Juntos hacemos la diferencia! 🌍💚"
     }
 
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+
     fun refresh() {
-        cargarReferidos()
+        loadReferidos()
     }
 }
+
+data class ReferidosUiState(
+    val codigoReferido: String = "",
+    val totalReferidos: Int = 0,
+    val totalEcoCoinsGanados: Int = 0,
+    val referidos: List<ReferidoItem> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
+data class ReferidoItem(
+    val id: String,
+    val nombre: String,
+    val fechaRegistro: String
+)
