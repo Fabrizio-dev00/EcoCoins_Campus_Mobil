@@ -7,59 +7,33 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val LightColorScheme = lightColorScheme(
-    primary = EcoGreenPrimary,
-    onPrimary = BackgroundWhite,
-    primaryContainer = EcoGreenLight,
-    onPrimaryContainer = EcoGreenDark,
-
-    secondary = EcoOrange,
-    onSecondary = BackgroundWhite,
-    secondaryContainer = EcoOrangeLight,
-    onSecondaryContainer = TextPrimary,
-
-    tertiary = PlasticBlue,
-    onTertiary = BackgroundWhite,
-
-    background = BackgroundLight,
-    onBackground = TextPrimary,
-
-    surface = BackgroundWhite,
-    onSurface = TextPrimary,
-    surfaceVariant = BackgroundLight,
-    onSurfaceVariant = TextSecondary,
-
-    error = StatusRejected,
-    onError = BackgroundWhite,
-
-    outline = DividerGray
-)
-
 private val DarkColorScheme = darkColorScheme(
     primary = EcoGreenPrimary,
+    secondary = EcoGreenSecondary,
+    tertiary = EcoOrange,
+    background = Color(0xFF121212),
+    surface = Color(0xFF1E1E1E),
     onPrimary = BackgroundWhite,
-    primaryContainer = EcoGreenDark,
-    onPrimaryContainer = EcoGreenLight,
-
-    secondary = EcoOrange,
-    onSecondary = DarkBackground,
-    secondaryContainer = EcoOrangeLight,
-    onSecondaryContainer = TextPrimary,
-
-    background = DarkBackground,
+    onSecondary = BackgroundWhite,
     onBackground = BackgroundWhite,
-
-    surface = DarkSurface,
     onSurface = BackgroundWhite,
-    surfaceVariant = DarkSurface,
-    onSurfaceVariant = TextSecondary,
+)
 
-    error = StatusRejected,
-    onError = BackgroundWhite
+private val LightColorScheme = lightColorScheme(
+    primary = EcoGreenPrimary,
+    secondary = EcoGreenSecondary,
+    tertiary = EcoOrange,
+    background = BackgroundWhite,
+    surface = SurfaceWhite,
+    onPrimary = BackgroundWhite,
+    onSecondary = BackgroundWhite,
+    onBackground = Color(0xFF1C1B1F),
+    onSurface = Color(0xFF1C1B1F),
 )
 
 @Composable
@@ -67,17 +41,13 @@ fun EcoCoinsCampusTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) {
-        DarkColorScheme
-    } else {
-        LightColorScheme
-    }
-
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
+
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = colorScheme.primary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
