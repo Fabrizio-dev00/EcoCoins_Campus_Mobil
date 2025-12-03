@@ -30,7 +30,7 @@ import com.ecocoins.campus.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecompensasScreen(
-    onNavigateToDetail: (Long) -> Unit,
+    onNavigateToDetail: (String) -> Unit,  // ⭐ Long -> String
     onNavigateToStore: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateBack: () -> Unit,

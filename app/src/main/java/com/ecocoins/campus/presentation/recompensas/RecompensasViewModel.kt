@@ -45,7 +45,7 @@ class RecompensasViewModel @Inject constructor(
 
     private fun loadEcoCoins() {
         viewModelScope.launch {
-            val coins = userPreferences.ecoCoins.firstOrNull() ?: 0L
+            val coins = userPreferences.userEcoCoins.firstOrNull() ?: 0L
             _ecoCoins.value = coins
         }
     }

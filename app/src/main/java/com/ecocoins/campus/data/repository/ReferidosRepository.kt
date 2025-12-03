@@ -12,7 +12,7 @@ class ReferidosRepository @Inject constructor(
     private val apiService: ApiService
 ) {
 
-    suspend fun getReferidosInfo(usuarioId: Long): Flow<Resource<ReferidosInfo>> = flow {
+    suspend fun getReferidosInfo(usuarioId: String): Flow<Resource<ReferidosInfo>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -28,7 +28,7 @@ class ReferidosRepository @Inject constructor(
         }
     }
 
-    suspend fun generarCodigoReferido(usuarioId: Long): Flow<Resource<CodigoReferidoResponse>> = flow {
+    suspend fun generarCodigoReferido(usuarioId: String): Flow<Resource<CodigoReferidoResponse>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -44,7 +44,7 @@ class ReferidosRepository @Inject constructor(
         }
     }
 
-    suspend fun usarCodigoReferido(usuarioId: Long, codigo: String): Flow<Resource<String>> = flow {
+    suspend fun usarCodigoReferido(usuarioId: String, codigo: String): Flow<Resource<String>> = flow {
         try {
             emit(Resource.Loading())
 

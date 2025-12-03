@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ecocoins.campus.ui.components.*
-import com.ecocoins.campus.utils.Resource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,19 +39,20 @@ fun RegisterScreen(
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
-    val registerState by viewModel.registerState.observeAsState()
+    // ✅ CORRECTO: observeAsState con AuthState
+    val registerState = viewModel.authState.collectAsState().value
 
     // Observar estado de registro
     LaunchedEffect(registerState) {
-        when (registerState) {
-            is Resource.Success -> {
-                viewModel.resetRegisterState()
+        when (val state = registerState) {
+            is AuthState.Success -> {
+                viewModel.resetState()
                 onNavigateToMain()
             }
-            is Resource.Error -> {
-                errorMessage = (registerState as Resource.Error).message ?: "Error desconocido"
+            is AuthState.Error -> {
+                errorMessage = state.message
                 showErrorDialog = true
-                viewModel.resetRegisterState()
+                viewModel.resetState()
             }
             else -> {}
         }
@@ -60,7 +60,7 @@ fun RegisterScreen(
 
     // Loading Dialog
     LoadingDialog(
-        isLoading = registerState is Resource.Loading,
+        isLoading = registerState is AuthState.Loading,
         message = "Creando cuenta..."
     )
 
@@ -218,7 +218,7 @@ fun RegisterScreen(
                         viewModel.register(nombre, email, password, carrera)
                     }
                 },
-                enabled = registerState !is Resource.Loading
+                enabled = registerState !is AuthState.Loading
             )
 
             Spacer(modifier = Modifier.height(16.dp))

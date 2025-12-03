@@ -8,7 +8,6 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -17,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ecocoins.campus.ui.components.*
-import com.ecocoins.campus.utils.Resource
 
 @Composable
 fun LoginScreen(
@@ -29,34 +27,35 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf("") }
+
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
-    val loginState by viewModel.loginState.observeAsState()
+    val authState = viewModel.authState.collectAsState().value
 
-    // Observar estado de login
-    LaunchedEffect(loginState) {
-        when (loginState) {
-            is Resource.Success -> {
-                viewModel.resetLoginState()
+    // 🔥 Observa cambios del estado
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Success -> {
                 onNavigateToMain()
+                viewModel.resetState()
             }
-            is Resource.Error -> {
-                errorMessage = (loginState as Resource.Error).message ?: "Error desconocido"
+            is AuthState.Error -> {
+                errorMessage = authState.message
                 showErrorDialog = true
-                viewModel.resetLoginState()
+                viewModel.resetState()
             }
-            else -> {}
+            else -> Unit
         }
     }
 
-    // Loading Dialog
+    // Loading
     LoadingDialog(
-        isLoading = loginState is Resource.Loading,
+        isLoading = authState is AuthState.Loading,
         message = "Iniciando sesión..."
     )
 
-    // Error Dialog
+    // Error dialog
     ErrorDialog(
         showDialog = showErrorDialog,
         title = "Error de inicio de sesión",
@@ -76,13 +75,10 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
-            Text(
-                text = "🌱",
-                fontSize = 64.sp
-            )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Logo
+            Text("🌱", fontSize = 64.sp)
+            Spacer(Modifier.height(16.dp))
 
             Text(
                 text = "EcoCoins Campus",
@@ -91,7 +87,7 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
             Text(
                 text = "Bienvenido de vuelta",
@@ -99,9 +95,9 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(Modifier.height(48.dp))
 
-            // Email Field
+            // Email
             CustomTextField(
                 value = email,
                 onValueChange = {
@@ -114,12 +110,12 @@ fun LoginScreen(
                 isError = emailError.isNotEmpty(),
                 errorMessage = emailError,
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
-                minLines = 3
+                minLines = 1
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Password Field
+            // Password
             CustomPasswordTextField(
                 value = password,
                 onValueChange = {
@@ -134,95 +130,87 @@ fun LoginScreen(
                 imeAction = ImeAction.Done,
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(
                     onDone = {
-                        if (validateFields(email, password,
-                                onEmailError = { emailError = it },
-                                onPasswordError = { passwordError = it }
-                            )) {
+                        if (validateFields(
+                                email, password,
+                                { emailError = it },
+                                { passwordError = it }
+                            )
+                        ) {
                             viewModel.login(email, password)
                         }
                     }
                 )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Olvidé mi contraseña
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
                 CustomTextButton(
                     text = "¿Olvidaste tu contraseña?",
-                    onClick = { /* TODO: Implementar recuperación */ }
+                    onClick = { /* TODO */ }
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
             // Login Button
             CustomButton(
                 text = "Iniciar Sesión",
                 onClick = {
-                    if (validateFields(email, password,
-                            onEmailError = { emailError = it },
-                            onPasswordError = { passwordError = it }
-                        )) {
+                    if (validateFields(
+                            email, password,
+                            { emailError = it },
+                            { passwordError = it }
+                        )
+                    ) {
                         viewModel.login(email, password)
                     }
                 },
-                enabled = loginState !is Resource.Loading
+                enabled = authState !is AuthState.Loading
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Divider
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Divider(modifier = Modifier.weight(1f))
+                Divider(Modifier.weight(1f))
                 Text(
                     text = "  o  ",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
-                Divider(modifier = Modifier.weight(1f))
+                Divider(Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Register Button
             CustomOutlinedButton(
                 text = "Crear Cuenta",
                 onClick = onNavigateToRegister
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(32.dp))
 
-            // Footer
             Text(
                 text = "Al continuar, aceptas nuestros",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
             Row {
-                CustomTextButton(
-                    text = "Términos de Servicio",
-                    onClick = { /* TODO */ }
-                )
-                Text(
-                    text = " y ",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                CustomTextButton(
-                    text = "Política de Privacidad",
-                    onClick = { /* TODO */ }
-                )
+                CustomTextButton(text = "Términos de Servicio", onClick = {})
+                Text(" y ", fontSize = 12.sp)
+                CustomTextButton(text = "Política de Privacidad", onClick = {})
             }
         }
     }
 }
+
 
 private fun validateFields(
     email: String,
@@ -230,6 +218,7 @@ private fun validateFields(
     onEmailError: (String) -> Unit,
     onPasswordError: (String) -> Unit
 ): Boolean {
+
     var isValid = true
 
     if (email.isBlank()) {
@@ -244,7 +233,7 @@ private fun validateFields(
         onPasswordError("La contraseña es requerida")
         isValid = false
     } else if (password.length < 6) {
-        onPasswordError("La contraseña debe tener al menos 6 caracteres")
+        onPasswordError("Mínimo 6 caracteres")
         isValid = false
     }
 

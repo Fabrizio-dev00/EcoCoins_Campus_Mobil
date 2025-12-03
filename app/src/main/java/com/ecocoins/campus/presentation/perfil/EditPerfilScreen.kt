@@ -28,14 +28,14 @@ fun EditPerfilScreen(
     val updateState by viewModel.updateState.observeAsState()
 
     var nombre by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var correo by remember { mutableStateOf("") }
     var carrera by remember { mutableStateOf("") }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(user) {
         user?.let {
             nombre = it.nombre
-            email = it.email
+            correo = it.correo
             carrera = it.carrera ?: ""
         }
     }
@@ -94,7 +94,7 @@ fun EditPerfilScreen(
 
             // Email (solo lectura)
             CustomTextField(
-                value = email,
+                value = correo,
                 onValueChange = {},
                 label = "Correo Electrónico",
                 placeholder = "tu@email.com",
@@ -123,7 +123,7 @@ fun EditPerfilScreen(
                     user?.let {
                         val updatedUser = it.copy(
                             nombre = nombre,
-                            carrera = carrera.ifBlank { null }
+                            carrera = carrera.ifBlank { null }.toString()
                         )
                         viewModel.updatePerfil(updatedUser)
                     }

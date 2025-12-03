@@ -5,7 +5,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ecocoins.campus.data.local.UserPreferences
-import com.ecocoins.campus.data.model.ResumenGeneral
 import com.ecocoins.campus.data.model.User
 import com.ecocoins.campus.data.repository.AuthRepository
 import com.ecocoins.campus.data.repository.EstadisticasRepository
@@ -25,8 +24,9 @@ class DashboardViewModel @Inject constructor(
     private val _user = MutableLiveData<User?>()
     val user: LiveData<User?> = _user
 
-    private val _resumenEstadisticas = MutableLiveData<Resource<ResumenGeneral>>()
-    val resumenEstadisticas: LiveData<Resource<ResumenGeneral>> = _resumenEstadisticas
+    // ✅ CAMBIO: De ResumenGeneral a Map<String, Any>
+    private val _resumenEstadisticas = MutableLiveData<Resource<Map<String, Any>>>()
+    val resumenEstadisticas: LiveData<Resource<Map<String, Any>>> = _resumenEstadisticas
 
     private val _ecoCoins = MutableLiveData<Long>()
     val ecoCoins: LiveData<Long> = _ecoCoins
@@ -48,7 +48,7 @@ class DashboardViewModel @Inject constructor(
             val userId = userPreferences.userId.firstOrNull()
             val userName = userPreferences.userName.firstOrNull()
             val userEmail = userPreferences.userEmail.firstOrNull()
-            val ecoCoinsValue = userPreferences.ecoCoins.firstOrNull() ?: 0L
+            val ecoCoinsValue = userPreferences.userEcoCoins.firstOrNull() ?: 0L
 
             _ecoCoins.value = ecoCoinsValue
 

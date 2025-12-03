@@ -11,7 +11,7 @@ class PerfilRepository @Inject constructor(
     private val apiService: ApiService
 ) {
 
-    suspend fun getPerfil(usuarioId: Long): Flow<Resource<User>> = flow {
+    suspend fun getPerfil(usuarioId: String): Flow<Resource<User>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -27,7 +27,7 @@ class PerfilRepository @Inject constructor(
         }
     }
 
-    suspend fun updatePerfil(usuarioId: Long, user: User): Flow<Resource<User>> = flow {
+    suspend fun updatePerfil(usuarioId: String, user: User): Flow<Resource<User>> = flow {
         try {
             emit(Resource.Loading())
 

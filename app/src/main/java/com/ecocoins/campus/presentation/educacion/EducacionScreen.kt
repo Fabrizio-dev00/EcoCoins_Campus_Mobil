@@ -27,19 +27,18 @@ import com.ecocoins.campus.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EducacionScreen(
-    onNavigateToContenido: (Long) -> Unit,
-    onNavigateToQuiz: (Long) -> Unit,
+    onNavigateToContenido: (String) -> Unit,  // ⭐ Long -> String
+    onNavigateToQuiz: (String) -> Unit,  // ⭐ Long -> String
     onNavigateBack: () -> Unit,
     viewModel: EducacionViewModel = hiltViewModel()
 ) {
     val contenidos by viewModel.contenidos.observeAsState(emptyList())
-    val quizzes by viewModel.quizzes.observeAsState(emptyList())
     val progreso by viewModel.progreso.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val error by viewModel.error.observeAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Contenidos", "Quizzes")
+    val tabs = listOf("Contenidos")  // ⭐ Eliminado "Quizzes" porque no existe en el repository
 
     Scaffold(
         topBar = {
@@ -58,17 +57,19 @@ fun EducacionScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tabs
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(title) }
-                    )
+            // Tabs (solo Contenidos por ahora)
+            if (tabs.size > 1) {  // ⭐ Solo mostrar tabs si hay más de uno
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) }
+                        )
+                    }
                 }
             }
 
@@ -92,44 +93,21 @@ fun EducacionScreen(
                             progreso?.let { ProgresoEducativoCard(it) }
                         }
 
-                        when (selectedTab) {
-                            0 -> {
-                                // Contenidos
-                                if (contenidos.isEmpty()) {
-                                    item {
-                                        EmptyState(
-                                            icon = Icons.Default.School,
-                                            title = "Sin contenidos",
-                                            message = "No hay contenidos disponibles"
-                                        )
-                                    }
-                                } else {
-                                    items(contenidos) { contenido ->
-                                        ContenidoCard(
-                                            contenido = contenido,
-                                            onClick = { onNavigateToContenido(contenido.id) }
-                                        )
-                                    }
-                                }
+                        // Contenidos
+                        if (contenidos.isEmpty()) {
+                            item {
+                                EmptyState(
+                                    icon = Icons.Default.School,
+                                    title = "Sin contenidos",
+                                    message = "No hay contenidos disponibles"
+                                )
                             }
-                            1 -> {
-                                // Quizzes
-                                if (quizzes.isEmpty()) {
-                                    item {
-                                        EmptyState(
-                                            icon = Icons.Default.Quiz,
-                                            title = "Sin quizzes",
-                                            message = "No hay quizzes disponibles"
-                                        )
-                                    }
-                                } else {
-                                    items(quizzes) { quiz ->
-                                        QuizCard(
-                                            quiz = quiz,
-                                            onClick = { onNavigateToQuiz(quiz.id) }
-                                        )
-                                    }
-                                }
+                        } else {
+                            items(contenidos) { contenido ->
+                                ContenidoCard(
+                                    contenido = contenido,
+                                    onClick = { onNavigateToContenido(contenido.id) }
+                                )
                             }
                         }
                     }
@@ -300,90 +278,6 @@ private fun ContenidoCard(
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = "Ver",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuizCard(
-    quiz: com.ecocoins.campus.data.model.Quiz,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = EcoOrangeLight.copy(alpha = 0.2f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .background(
-                        color = EcoOrange.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Quiz,
-                    contentDescription = "Quiz",
-                    tint = EcoOrange,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = quiz.titulo,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = quiz.descripcion,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Help,
-                        contentDescription = "Preguntas",
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${quiz.totalPreguntas} preguntas",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "+${quiz.recompensaEcoCoins} EC",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = EcoOrange
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.Default.ArrowForward,
-                contentDescription = "Iniciar",
-                tint = EcoOrange
             )
         }
     }

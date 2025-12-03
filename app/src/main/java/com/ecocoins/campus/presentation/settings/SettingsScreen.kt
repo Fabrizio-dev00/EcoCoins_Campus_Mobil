@@ -112,7 +112,7 @@ fun SettingsScreen(
                     titulo = "Notificaciones",
                     descripcion = "Recibir notificaciones de la app",
                     checked = notificationsEnabled,
-                    onCheckedChange = { viewModel.toggleNotifications() }
+                    onCheckedChange = { viewModel.toggleNotifications(enabled = true) }
                 )
             }
 
@@ -122,7 +122,7 @@ fun SettingsScreen(
                     titulo = "Modo Oscuro",
                     descripcion = "Activar tema oscuro",
                     checked = darkModeEnabled,
-                    onCheckedChange = { viewModel.toggleDarkMode() }
+                    onCheckedChange = { viewModel.toggleDarkMode(enabled = true) }
                 )
             }
 

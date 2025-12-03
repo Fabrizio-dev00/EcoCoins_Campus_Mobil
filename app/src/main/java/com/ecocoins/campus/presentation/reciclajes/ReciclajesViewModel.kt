@@ -22,8 +22,8 @@ class ReciclajesViewModel @Inject constructor(
     private val _reciclajes = MutableLiveData<List<Reciclaje>>()
     val reciclajes: LiveData<List<Reciclaje>> = _reciclajes
 
-    private val _registrarState = MutableLiveData<Resource<Reciclaje>>()
-    val registrarState: LiveData<Resource<Reciclaje>> = _registrarState
+    private val _registrarState = MutableLiveData<Resource<Reciclaje>?>()
+    val registrarState: LiveData<Resource<Reciclaje>> = _registrarState as LiveData<Resource<Reciclaje>>
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading

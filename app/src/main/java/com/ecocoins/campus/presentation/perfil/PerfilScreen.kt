@@ -74,7 +74,7 @@ fun PerfilScreen(
                     item {
                         PerfilHeader(
                             nombre = user!!.nombre,
-                            email = user!!.email,
+                            email = user!!.correo,
                             nivel = user!!.nivel,
                             carrera = user!!.carrera ?: "Sin carrera",
                             onEditClick = onNavigateToEdit
@@ -230,7 +230,7 @@ private fun PerfilHeader(
 
 @Composable
 private fun EcoCoinsCard(
-    ecoCoins: Long,
+    ecoCoins: Int,
     nivel: Int
 ) {
     Card(

@@ -74,7 +74,7 @@ class SoporteViewModel @Inject constructor(
         }
     }
 
-    fun marcarFAQUtil(faqId: Long) {
+    fun marcarFAQUtil(faqId: String) {
         viewModelScope.launch {
             soporteRepository.marcarFAQUtil(faqId).collect { resource ->
                 when (resource) {

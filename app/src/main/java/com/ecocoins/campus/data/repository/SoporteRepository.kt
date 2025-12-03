@@ -1,7 +1,6 @@
 package com.ecocoins.campus.data.repository
 
 import com.ecocoins.campus.data.model.FAQ
-import com.ecocoins.campus.data.model.RespuestaTicket
 import com.ecocoins.campus.data.model.Ticket
 import com.ecocoins.campus.data.remote.ApiService
 import com.ecocoins.campus.utils.Resource
@@ -45,7 +44,7 @@ class SoporteRepository @Inject constructor(
         }
     }
 
-    suspend fun marcarFAQUtil(faqId: Long): Flow<Resource<String>> = flow {
+    suspend fun marcarFAQUtil(faqId: String): Flow<Resource<String>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -61,7 +60,7 @@ class SoporteRepository @Inject constructor(
         }
     }
 
-    suspend fun getTicketsUsuario(usuarioId: Long): Flow<Resource<List<Ticket>>> = flow {
+    suspend fun getTicketsUsuario(usuarioId: String): Flow<Resource<List<Ticket>>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -109,7 +108,7 @@ class SoporteRepository @Inject constructor(
         }
     }
 
-    suspend fun responderTicket(ticketId: Long, respuesta: RespuestaTicket): Flow<Resource<String>> = flow {
+    suspend fun responderTicket(ticketId: Long, respuesta: String): Flow<Resource<String>> = flow {
         try {
             emit(Resource.Loading())
 

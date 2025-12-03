@@ -22,7 +22,7 @@ import com.ecocoins.campus.ui.theme.*
 @Composable
 fun SoporteScreen(
     onNavigateToFAQ: () -> Unit,
-    onNavigateToTicket: (Long) -> Unit,
+    onNavigateToTicket: (String) -> Unit,  // ⭐ Long -> String
     onNavigateBack: () -> Unit,
     viewModel: SoporteViewModel = hiltViewModel()
 ) {

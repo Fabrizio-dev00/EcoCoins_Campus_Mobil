@@ -13,7 +13,11 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
+    // ✅ AGREGAR: Interceptor de autenticación
+    private val authInterceptor = AuthInterceptor()
+
     private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(authInterceptor)  // ✅ AGREGAR PRIMERO (antes del logging)
         .addInterceptor(loggingInterceptor)
         .connectTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)
         .readTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)

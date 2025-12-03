@@ -54,7 +54,7 @@ class ReciclajeRepository @Inject constructor(
         }
     }
 
-    suspend fun getReciclajesUsuario(usuarioId: Long): Flow<Resource<List<Reciclaje>>> = flow {
+    suspend fun getReciclajesUsuario(usuarioId: String): Flow<Resource<List<Reciclaje>>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -71,7 +71,7 @@ class ReciclajeRepository @Inject constructor(
     }
 
     suspend fun getHistorialReciclajes(
-        usuarioId: Long,
+        usuarioId: String,
         page: Int = 0,
         size: Int = 20
     ): Flow<Resource<List<Reciclaje>>> = flow {

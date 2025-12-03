@@ -19,12 +19,17 @@ class RankingRepository @Inject constructor(
             val response = apiService.getRankingGlobal(page, size)
 
             if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+                val apiResponse = response.body()!!
+                if (apiResponse.success && apiResponse.data != null) {
+                    emit(Resource.Success(apiResponse.data))
+                } else {
+                    emit(Resource.Error(apiResponse.message.toString()))
+                }
             } else {
                 emit(Resource.Error("Error al obtener ranking: ${response.message()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
         }
     }
 
@@ -35,12 +40,17 @@ class RankingRepository @Inject constructor(
             val response = apiService.getRankingSemanal(page, size)
 
             if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+                val apiResponse = response.body()!!
+                if (apiResponse.success && apiResponse.data != null) {
+                    emit(Resource.Success(apiResponse.data))
+                } else {
+                    emit(Resource.Error(apiResponse.message.toString()))
+                }
             } else {
                 emit(Resource.Error("Error al obtener ranking semanal: ${response.message()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
         }
     }
 
@@ -51,28 +61,38 @@ class RankingRepository @Inject constructor(
             val response = apiService.getRankingMensual(page, size)
 
             if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+                val apiResponse = response.body()!!
+                if (apiResponse.success && apiResponse.data != null) {
+                    emit(Resource.Success(apiResponse.data))
+                } else {
+                    emit(Resource.Error(apiResponse.message.toString()))
+                }
             } else {
                 emit(Resource.Error("Error al obtener ranking mensual: ${response.message()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
         }
     }
 
-    suspend fun getPosicionUsuario(usuarioId: Long): Flow<Resource<PosicionUsuario>> = flow {
+    suspend fun getPosicionUsuario(usuarioId: String): Flow<Resource<PosicionUsuario>> = flow {
         try {
             emit(Resource.Loading())
 
             val response = apiService.getPosicionUsuario(usuarioId)
 
             if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+                val apiResponse = response.body()!!
+                if (apiResponse.success && apiResponse.data != null) {
+                    emit(Resource.Success(apiResponse.data))
+                } else {
+                    emit(Resource.Error(apiResponse.message.toString()))
+                }
             } else {
                 emit(Resource.Error("Error al obtener posición: ${response.message()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
         }
     }
 }

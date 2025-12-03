@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ecocoins.campus"
-        minSdk = 36
+        minSdk = 31
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -115,6 +115,7 @@ dependencies {
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("com.google.accompanist:accompanist-permissions:0.31.3-beta")
 
     // ML Kit para escanear códigos QR
     implementation("com.google.mlkit:barcode-scanning:17.2.0")

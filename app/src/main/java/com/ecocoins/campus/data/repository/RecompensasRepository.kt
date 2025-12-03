@@ -46,13 +46,13 @@ class RecompensasRepository @Inject constructor(
     }
 
     suspend fun canjearRecompensa(
-        usuarioId: Long,
+        usuarioId: String,
         recompensaId: Long
     ): Flow<Resource<Canje>> = flow {
         try {
             emit(Resource.Loading())
 
-            val request = CanjeRequest(usuarioId, recompensaId)
+            val request = CanjeRequest(usuarioId, recompensaId.toString())
             val response = apiService.canjearRecompensa(request)
 
             if (response.isSuccessful && response.body() != null) {
@@ -82,7 +82,7 @@ class RecompensasRepository @Inject constructor(
     }
 
     suspend fun getHistorialCanjes(
-        usuarioId: Long,
+        usuarioId: String,
         page: Int = 0,
         size: Int = 20
     ): Flow<Resource<List<Canje>>> = flow {

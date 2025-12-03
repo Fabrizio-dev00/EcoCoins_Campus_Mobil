@@ -29,7 +29,7 @@ import com.ecocoins.campus.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoreScreen(
-    onNavigateToDetail: (Long) -> Unit,
+    onNavigateToDetail: (String) -> Unit,  // ⭐ Long -> String
     onNavigateBack: () -> Unit,
     viewModel: RecompensasViewModel = hiltViewModel()
 ) {

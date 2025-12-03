@@ -21,7 +21,7 @@ sealed class Screen(val route: String) {
     // Recompensas
     object Recompensas : Screen("recompensas")
     object RecompensaDetail : Screen("recompensa_detail/{recompensaId}") {
-        fun createRoute(recompensaId: Long) = "recompensa_detail/$recompensaId"
+        fun createRoute(recompensaId: String) = "recompensa_detail/$recompensaId"
     }
     object Store : Screen("store")
 
@@ -46,10 +46,10 @@ sealed class Screen(val route: String) {
     // Educación
     object Educacion : Screen("educacion")
     object ContenidoDetail : Screen("contenido_detail/{contenidoId}") {
-        fun createRoute(contenidoId: Long) = "contenido_detail/$contenidoId"
+        fun createRoute(contenidoId: String) = "contenido_detail/$contenidoId"
     }
     object Quiz : Screen("quiz/{quizId}") {
-        fun createRoute(quizId: Long) = "quiz/$quizId"
+        fun createRoute(quizId: String) = "quiz/$quizId"
     }
 
     // Referidos
@@ -59,7 +59,7 @@ sealed class Screen(val route: String) {
     object Soporte : Screen("soporte")
     object FAQ : Screen("faq")
     object TicketDetail : Screen("ticket_detail/{ticketId}") {
-        fun createRoute(ticketId: Long) = "ticket_detail/$ticketId"
+        fun createRoute(ticketId: String) = "ticket_detail/$ticketId"
     }
 
     // Perfil

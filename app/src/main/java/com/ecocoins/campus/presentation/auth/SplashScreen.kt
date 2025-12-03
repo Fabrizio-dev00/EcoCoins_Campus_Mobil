@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -26,15 +27,15 @@ fun SplashScreen(
     onNavigateToMain: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    val isLoggedIn by viewModel.isLoggedIn.observeAsState(false)
+    val state = viewModel.authState.collectAsState()
 
     LaunchedEffect(Unit) {
-        delay(2000) // Mostrar splash por 2 segundos
+        viewModel.checkAuthStatus()
+        delay(1500)
 
-        if (isLoggedIn) {
-            onNavigateToMain()
-        } else {
-            onNavigateToLogin()
+        when (state.value) {
+            is AuthState.Success -> onNavigateToMain()
+            else -> onNavigateToLogin()
         }
     }
 

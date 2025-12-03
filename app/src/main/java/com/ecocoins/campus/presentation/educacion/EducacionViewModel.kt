@@ -29,17 +29,14 @@ class EducacionViewModel @Inject constructor(
     private val _selectedContenido = MutableLiveData<ContenidoEducativo?>()
     val selectedContenido: LiveData<ContenidoEducativo?> = _selectedContenido
 
-    private val _quizzes = MutableLiveData<List<Quiz>>()
-    val quizzes: LiveData<List<Quiz>> = _quizzes
-
     private val _selectedQuiz = MutableLiveData<Quiz?>()
     val selectedQuiz: LiveData<Quiz?> = _selectedQuiz
 
-    private val _resultadoQuiz = MutableLiveData<Resource<ResultadoQuiz>>()
-    val resultadoQuiz: LiveData<Resource<ResultadoQuiz>> = _resultadoQuiz
+    private val _resultadoQuiz = MutableLiveData<Resource<ResultadoQuiz>?>()
+    val resultadoQuiz: LiveData<Resource<ResultadoQuiz>?> = _resultadoQuiz  // ⭐ Cambio aquí
 
     private val _categorias = MutableLiveData<List<CategoriaEducativa>>()
-    val categorias: LiveData<List<CategoriaEducativa>> = _categorias
+    val categorias: LiveData<List<CategoriaEducativa>> = _categorias  // ⭐ Cambio: categoria -> categorias
 
     private val _progreso = MutableLiveData<ProgresoEducativo?>()
     val progreso: LiveData<ProgresoEducativo?> = _progreso
@@ -52,7 +49,6 @@ class EducacionViewModel @Inject constructor(
 
     init {
         loadContenidos()
-        loadQuizzes()
         loadCategorias()
         loadProgreso()
     }
@@ -62,7 +58,7 @@ class EducacionViewModel @Inject constructor(
             _isLoading.value = true
 
             val flow = if (categoria != null) {
-                educacionRepository.getContenidosPorCategoria(categoria)
+                educacionRepository.getContenidosPorCategoria(categoria, null)  // ⭐ Agregado null para tipo
             } else {
                 educacionRepository.getContenidosEducativos()
             }
@@ -85,7 +81,7 @@ class EducacionViewModel @Inject constructor(
         }
     }
 
-    fun getContenidoById(contenidoId: Long) {
+    fun getContenidoById(contenidoId: String) {  // ⭐ Cambio: Long -> String
         viewModelScope.launch {
             _isLoading.value = true
 
@@ -107,7 +103,7 @@ class EducacionViewModel @Inject constructor(
         }
     }
 
-    fun completarContenido(contenidoId: Long) {
+    fun completarContenido(contenidoId: String) {  // ⭐ Cambio: Long -> String
         viewModelScope.launch {
             val userId = userPreferences.userId.firstOrNull()
 
@@ -127,23 +123,7 @@ class EducacionViewModel @Inject constructor(
         }
     }
 
-    private fun loadQuizzes() {
-        viewModelScope.launch {
-            educacionRepository.getQuizzes().collect { resource ->
-                when (resource) {
-                    is Resource.Success -> {
-                        _quizzes.value = resource.data ?: emptyList()
-                    }
-                    is Resource.Error -> {
-                        _error.value = resource.message
-                    }
-                    is Resource.Loading -> {}
-                }
-            }
-        }
-    }
-
-    fun getQuizById(quizId: Long) {
+    fun getQuizById(quizId: String) {  // ⭐ Cambio: Long -> String
         viewModelScope.launch {
             _isLoading.value = true
 
@@ -165,12 +145,12 @@ class EducacionViewModel @Inject constructor(
         }
     }
 
-    fun completarQuiz(quizId: Long, respuestas: Map<Long, Int>) {
+    fun enviarQuiz(quizId: String, respuestas: List<Int>) {  // ⭐ Cambios: Long -> String, Map -> List
         viewModelScope.launch {
             val userId = userPreferences.userId.firstOrNull()
 
             if (userId != null) {
-                educacionRepository.completarQuiz(quizId, userId, respuestas).collect { resource ->
+                educacionRepository.enviarQuiz(quizId, userId, respuestas).collect { resource ->
                     _resultadoQuiz.value = resource
 
                     if (resource is Resource.Success) {

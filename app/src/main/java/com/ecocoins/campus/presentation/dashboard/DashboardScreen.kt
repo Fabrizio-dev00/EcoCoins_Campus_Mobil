@@ -123,9 +123,10 @@ fun DashboardScreen(
                                         modifier = Modifier.padding(vertical = 8.dp)
                                     )
                                     ImpactoStatsCard(
-                                        totalReciclajes = resumen.totalReciclajes,
-                                        kgReciclados = resumen.totalKgReciclados,
-                                        ecoCoinsGanados = resumen.ecoCoinsGanados
+                                        // ✅ Acceder a los valores del Map con conversión segura
+                                        totalReciclajes = (resumen["totalReciclajes"] as? Number)?.toInt() ?: 0,
+                                        kgReciclados = (resumen["totalKgReciclados"] as? Number)?.toDouble() ?: 0.0,
+                                        ecoCoinsGanados = (resumen["ecoCoinsGanados"] as? Number)?.toLong() ?: 0L
                                     )
                                 }
                             }

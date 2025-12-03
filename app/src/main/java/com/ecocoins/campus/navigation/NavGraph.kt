@@ -94,7 +94,7 @@ fun NavGraph(
         composable(route = Screen.Main.route) {
             MainScreen(
                 onNavigateToNotifications = {
-                    navController.navigate(Screen.Notificaciones.route)
+                    // navController.navigate(Screen.Notificaciones.route)
                 },
                 onNavigateToPerfil = {
                     navController.navigate(Screen.Perfil.route)
@@ -163,15 +163,15 @@ fun NavGraph(
 
         composable(route = Screen.QRScanner.route) {
             QRScannerScreen(
-                onQRScanned = { qrCode ->
-                    // Navegar a selección de material con QR
-                    navController.navigate(Screen.MaterialSelection.route)
+                onNavigateBack = { navController.popBackStack() },
+                onQRDetected = { qrCode ->
+                    navController.navigate(Screen.PhotoCapture.route)
                 },
                 onNavigateToManualEntry = {
                     navController.navigate(Screen.PhotoCapture.route)
                 },
-                onNavigateBack = {
-                    navController.popBackStack()
+                onQRScanned = {
+                    navController.navigate(Screen.MaterialSelection.route)
                 }
             )
         }
@@ -251,7 +251,9 @@ fun NavGraph(
             StoreScreen(
                 onNavigateBack = {
                     navController.popBackStack()
-                }
+                },
+                onNavigateToDetail = TODO(),
+                viewModel = TODO()
             )
         }
 
@@ -336,10 +338,10 @@ fun NavGraph(
         composable(
             route = Screen.ContenidoDetail.route,
             arguments = listOf(
-                navArgument("contenidoId") { type = NavType.LongType }
+                navArgument("contenidoId") { type = NavType.StringType }  // ⭐ LongType -> StringType
             )
         ) { backStackEntry ->
-            val contenidoId = backStackEntry.arguments?.getLong("contenidoId") ?: 0L
+            val contenidoId = backStackEntry.arguments?.getString("contenidoId") ?: ""  // ⭐ getLong -> getString
             ContenidoDetailScreen(
                 contenidoId = contenidoId,
                 onNavigateBack = {
@@ -351,10 +353,10 @@ fun NavGraph(
         composable(
             route = Screen.Quiz.route,
             arguments = listOf(
-                navArgument("quizId") { type = NavType.LongType }
+                navArgument("quizId") { type = NavType.StringType }  // ⭐ LongType -> StringType
             )
         ) { backStackEntry ->
-            val quizId = backStackEntry.arguments?.getLong("quizId") ?: 0L
+            val quizId = backStackEntry.arguments?.getString("quizId") ?: ""  // ⭐ getLong -> getString
             QuizScreen(
                 quizId = quizId,
                 onNavigateBack = {
@@ -427,7 +429,11 @@ fun NavGraph(
                 },
                 onNavigateBack = {
                     navController.popBackStack()
-                }
+                },
+                onNavigateToSettings = TODO(),
+                onNavigateToEstadisticas = TODO(),
+                onNavigateToLogros = TODO(),
+                viewModel = TODO()
             )
         }
 
@@ -447,6 +453,11 @@ fun NavGraph(
             SettingsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Main.route) { inclusive = true }
+                    }
                 }
             )
         }

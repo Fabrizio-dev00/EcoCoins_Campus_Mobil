@@ -15,64 +15,69 @@ class AuthRepository @Inject constructor(
     private val userPreferences: UserPreferences
 ) {
 
-    suspend fun login(email: String, password: String): Flow<Resource<User>> = flow {
+    fun login(
+        request: LoginRequest
+    ): Flow<Resource<User>> = flow {
         try {
             emit(Resource.Loading())
 
-            val response = apiService.login(LoginRequest(email, password))
+            val response = apiService.login(request)
 
             if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
-                val user = authResponse.usuario
+                val apiResponse = response.body()!! // ApiResponse<User>
+                val user = apiResponse.data // Acceder a 'data' en lugar de 'usuario'
 
-                // Guardar datos del usuario en DataStore
-                userPreferences.saveUserData(
-                    userId = user.id,
-                    name = user.nombre,
-                    email = user.email,
-                    token = authResponse.token,
-                    ecoCoins = user.ecoCoins
-                )
+                if (user != null) {
+                    userPreferences.saveUserData(
+                        userId = user.id,
+                        name = user.nombre,
+                        email = user.correo,
+                        token = "", // No hay token en login
+                        ecoCoins = user.ecoCoins
+                    )
 
-                emit(Resource.Success(user))
+                    emit(Resource.Success(user))
+                } else {
+                    emit(Resource.Error("No se recibieron datos del usuario"))
+                }
             } else {
                 emit(Resource.Error("Error al iniciar sesión: ${response.message()}"))
             }
+
         } catch (e: Exception) {
             emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
         }
     }
 
-    suspend fun register(
-        nombre: String,
-        email: String,
-        password: String,
-        carrera: String
+    fun register(
+        request: RegisterRequest
     ): Flow<Resource<User>> = flow {
         try {
             emit(Resource.Loading())
 
-            val response = apiService.register(
-                RegisterRequest(nombre, email, password, carrera)
-            )
+            val response = apiService.register(request)
 
             if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
-                val user = authResponse.usuario
+                val apiResponse = response.body()!! // ApiResponse<User>
+                val user = apiResponse.data // Acceder a 'data' en lugar de 'usuario'
 
-                // Guardar datos del usuario en DataStore
-                userPreferences.saveUserData(
-                    userId = user.id,
-                    name = user.nombre,
-                    email = user.email,
-                    token = authResponse.token,
-                    ecoCoins = user.ecoCoins
-                )
+                if (user != null) {
+                    userPreferences.saveUserData(
+                        userId = user.id,
+                        name = user.nombre,
+                        email = user.correo,
+                        token = "", // No hay token en registro
+                        ecoCoins = user.ecoCoins
+                    )
 
-                emit(Resource.Success(user))
+                    emit(Resource.Success(user))
+                } else {
+                    emit(Resource.Error("No se recibieron datos del usuario"))
+                }
             } else {
                 emit(Resource.Error("Error al registrarse: ${response.message()}"))
             }
+
         } catch (e: Exception) {
             emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
         }
@@ -82,11 +87,11 @@ class AuthRepository @Inject constructor(
         userPreferences.clearUserData()
     }
 
-    fun getUserId(): Flow<Long?> = userPreferences.userId
+    fun getUserId(): Flow<String?> = userPreferences.userId
 
     fun isLoggedIn(): Flow<Boolean> = userPreferences.isLoggedIn
 
-    suspend fun getPerfil(usuarioId: Long): Flow<Resource<User>> = flow {
+    suspend fun getPerfil(usuarioId: String): Flow<Resource<User>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -106,7 +111,7 @@ class AuthRepository @Inject constructor(
         try {
             emit(Resource.Loading())
 
-            val response = apiService.updatePerfil(usuarioId, user)
+            val response = apiService.updatePerfil(usuarioId.toString(), user)
 
             if (response.isSuccessful && response.body() != null) {
                 emit(Resource.Success(response.body()!!))

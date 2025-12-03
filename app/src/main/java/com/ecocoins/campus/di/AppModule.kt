@@ -2,10 +2,14 @@ package com.ecocoins.campus.di
 
 import android.content.Context
 import com.ecocoins.campus.data.local.UserPreferences
+import com.ecocoins.campus.data.remote.AuthInterceptor
 import com.ecocoins.campus.data.remote.ApiService
 import com.ecocoins.campus.data.remote.RetrofitClient
 import com.ecocoins.campus.data.repository.*
 import com.ecocoins.campus.utils.Constants
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -25,6 +29,16 @@ import javax.inject.Singleton
 object AppModule {
 
     // ============================================================================
+    // FIREBASE - ✅ AGREGADO
+    // ============================================================================
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return Firebase.auth
+    }
+
+    // ============================================================================
     // NETWORKING
     // ============================================================================
 
@@ -38,6 +52,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAuthInterceptor(): AuthInterceptor {
+        return AuthInterceptor()
+    }
+
+    @Provides
+    @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -47,9 +67,11 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,  // ⭐ AGREGAR PARÁMETRO
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)  // ⭐ AGREGAR PRIMERO
             .addInterceptor(loggingInterceptor)
             .connectTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)

@@ -2,6 +2,7 @@ package com.ecocoins.campus.presentation.mapa
 
 import android.Manifest
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,13 +18,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.ecocoins.campus.data.model.PuntoReciclaje
 import com.ecocoins.campus.ui.components.EmptyState
-import com.ecocoins.campus.ui.components.ErrorState
 import com.ecocoins.campus.ui.components.LoadingState
 import com.ecocoins.campus.ui.theme.*
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberPermissionState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -32,17 +33,16 @@ fun MapaPuntosScreen(
     viewModel: MapaPuntosViewModel = hiltViewModel()
 ) {
     val puntos by viewModel.puntos.observeAsState(emptyList())
-    val selectedPunto by viewModel.selectedPunto.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
-    val error by viewModel.error.observeAsState()
+    val selectedPunto by viewModel.selectedPunto.observeAsState()
 
-    val locationPermissionState = rememberPermissionState(permission = Manifest.permission.ACCESS_FINE_LOCATION)
-    var showPermissionDialog by remember { mutableStateOf(false) }
+    var showDetailsDialog by remember { mutableStateOf(false) }
+
+    // Permiso de ubicación con Accompanist
+    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
     LaunchedEffect(Unit) {
-        if (!locationPermissionState.hasPermission) {
-            showPermissionDialog = true
-        }
+        viewModel.loadPuntos()
     }
 
     Scaffold(
@@ -62,129 +62,150 @@ fun MapaPuntosScreen(
             )
         }
     ) { paddingValues ->
-        when {
-            isLoading -> {
-                LoadingState(message = "Cargando puntos de reciclaje...")
-            }
-            error != null -> {
-                ErrorState(
-                    message = error ?: "Error desconocido",
-                    onRetry = { viewModel.loadPuntos() }
-                )
-            }
-            puntos.isEmpty() -> {
-                EmptyState(
-                    icon = Icons.Default.LocationOn,
-                    title = "Sin puntos de reciclaje",
-                    message = "No hay puntos disponibles en tu área"
-                )
-            }
-            else -> {
-                Column(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Solicitar permiso de ubicación
+            if (!locationPermissionState.status.isGranted) {
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = EcoOrange.copy(alpha = 0.1f)
+                    )
                 ) {
-                    // Info Card
-                    Card(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = EcoGreenLight.copy(alpha = 0.2f)
-                        )
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = EcoGreenPrimary
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Ubicación",
+                            tint = EcoOrange,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Encuentra los puntos de reciclaje más cercanos a ti",
-                                fontSize = 14.sp
+                                text = "Activa tu ubicación",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Para mostrarte puntos cercanos",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Button(onClick = { locationPermissionState.launchPermissionRequest() }) {
+                            Text("Activar")
+                        }
                     }
+                }
+            }
 
-                    // Lista de puntos
+            // Card de información
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = EcoGreenLight.copy(alpha = 0.2f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Info",
+                        tint = EcoGreenPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Encuentra los puntos de reciclaje más cercanos a tu ubicación",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            when {
+                isLoading -> {
+                    LoadingState(message = "Cargando puntos...")
+                }
+                puntos.isEmpty() -> {
+                    EmptyState(
+                        icon = Icons.Default.LocationOff,
+                        title = "Sin puntos cercanos",
+                        message = "No hay puntos de reciclaje disponibles en este momento"
+                    )
+                }
+                else -> {
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(puntos) { punto ->
                             PuntoReciclajeCard(
                                 punto = punto,
-                                onClick = { viewModel.selectPunto(punto) }
+                                onClick = {
+                                    viewModel.selectPunto(punto)
+                                    showDetailsDialog = true
+                                }
                             )
                         }
                     }
                 }
             }
         }
-    }
 
-    // Diálogo de permiso de ubicación
-    if (showPermissionDialog) {
-        AlertDialog(
-            onDismissRequest = { showPermissionDialog = false },
-            icon = {
-                Icon(Icons.Default.LocationOn, "Ubicación", tint = EcoGreenPrimary)
-            },
-            title = { Text("Permiso de Ubicación") },
-            text = { Text("Para mostrarte los puntos de reciclaje más cercanos, necesitamos acceso a tu ubicación.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        locationPermissionState.launchPermissionRequest()
-                        showPermissionDialog = false
-                    }
-                ) {
-                    Text("Permitir")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPermissionDialog = false }) {
-                    Text("Ahora no")
-                }
-            }
-        )
-    }
-
-    // Diálogo de detalles del punto seleccionado
-    selectedPunto?.let { punto ->
-        AlertDialog(
-            onDismissRequest = { viewModel.selectPunto(null) },
-            title = { Text(punto.nombre) },
-            text = {
-                Column {
-                    DetailRow(icon = Icons.Default.LocationOn, text = punto.direccion)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    DetailRow(icon = Icons.Default.AccessTime, text = punto.horario)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    DetailRow(
-                        icon = Icons.Default.RecyclingCenter,
-                        text = "Materiales: ${punto.materialesAceptados.joinToString(", ")}"
-                    )
-                    if (punto.distanciaKm != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+        // Dialog de detalles
+        if (showDetailsDialog && selectedPunto != null) {
+            AlertDialog(
+                onDismissRequest = { showDetailsDialog = false },
+                title = { Text(selectedPunto!!.nombre) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         DetailRow(
-                            icon = Icons.Default.DirectionsWalk,
-                            text = "${String.format("%.1f", punto.distanciaKm)} km de distancia"
+                            icon = Icons.Default.LocationOn,
+                            label = "Dirección",
+                            value = selectedPunto!!.direccion
                         )
+                        DetailRow(
+                            icon = Icons.Default.AccessTime,
+                            label = "Horario",
+                            value = selectedPunto!!.horario
+                        )
+                        DetailRow(
+                            icon = Icons.Default.Recycling,
+                            label = "Materiales",
+                            value = selectedPunto!!.materialesAceptados.joinToString(", ")
+                        )
+                        selectedPunto!!.distanciaKm?.let { distancia ->
+                            DetailRow(
+                                icon = Icons.Default.DirectionsWalk,
+                                label = "Distancia",
+                                value = String.format("%.1f km", distancia)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { showDetailsDialog = false }) {
+                        Text("Cerrar")
                     }
                 }
-            },
-            confirmButton = {
-                Button(onClick = { viewModel.selectPunto(null) }) {
-                    Text("Entendido")
-                }
-            }
-        )
+            )
+        }
     }
 }
 
@@ -194,62 +215,63 @@ private fun PuntoReciclajeCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Nombre y estado
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = punto.nombre,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Ubicación",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = punto.direccion,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
+                Text(
+                    text = punto.nombre,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
                 EstadoBadge(punto.estado)
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Dirección
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Dirección",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = punto.direccion,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
+            // Horario y distancia
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.AccessTime,
                         contentDescription = "Horario",
-                        modifier = Modifier.size(16.dp),
-                        tint = EcoGreenPrimary
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -259,31 +281,29 @@ private fun PuntoReciclajeCard(
                     )
                 }
 
-                if (punto.distanciaKm != null) {
+                punto.distanciaKm?.let { distancia ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.DirectionsWalk,
                             contentDescription = "Distancia",
-                            modifier = Modifier.size(16.dp),
-                            tint = PlasticBlue
+                            tint = EcoGreenPrimary,
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${String.format("%.1f", punto.distanciaKm)} km",
+                            text = String.format("%.1f km", distancia),
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = PlasticBlue
+                            fontWeight = FontWeight.Medium,
+                            color = EcoGreenPrimary
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Materiales aceptados
+            // Materiales
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 punto.materialesAceptados.take(3).forEach { material ->
                     MaterialChip(material)
@@ -295,7 +315,7 @@ private fun PuntoReciclajeCard(
                     ) {
                         Text(
                             text = "+${punto.materialesAceptados.size - 3}",
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
@@ -306,24 +326,8 @@ private fun PuntoReciclajeCard(
 }
 
 @Composable
-private fun MaterialChip(material: String) {
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = EcoGreenPrimary.copy(alpha = 0.2f)
-    ) {
-        Text(
-            text = material,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            color = EcoGreenPrimary,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
 private fun EstadoBadge(estado: String) {
-    val (color, text) = when (estado.uppercase()) {
+    val (color, text) = when (estado) {
         "DISPONIBLE" -> EcoGreenPrimary to "Disponible"
         "LLENO" -> StatusRejected to "Lleno"
         "MANTENIMIENTO" -> StatusPending to "Mantenimiento"
@@ -345,24 +349,57 @@ private fun EstadoBadge(estado: String) {
 }
 
 @Composable
+private fun MaterialChip(material: String) {
+    val color = when (material.uppercase()) {
+        "PLASTICO" -> PlasticBlue
+        "PAPEL" -> PaperBrown
+        "VIDRIO" -> GlassGreen
+        "METAL" -> MetalGray
+        else -> EcoGreenSecondary
+    }
+
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = color.copy(alpha = 0.2f)
+    ) {
+        Text(
+            text = material,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = color,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
 private fun DetailRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String
+    label: String,
+    value: String
 ) {
     Row(
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = EcoGreenPrimary
+            contentDescription = label,
+            tint = EcoGreenPrimary,
+            modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
-        )
+        Column {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }

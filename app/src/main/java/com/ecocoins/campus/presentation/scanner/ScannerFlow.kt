@@ -18,22 +18,39 @@ fun ScannerFlow(
     ) {
         composable("qr_scanner") {
             QRScannerScreen(
-                onQRScanned = { navController.navigate("material_selection") },
-                onNavigateToManualEntry = { navController.navigate("photo_capture") },
-                onNavigateBack = onCancel
+                onNavigateBack = onCancel,
+                onQRDetected = { qrCode ->
+                    // Cuando se detecta un QR válido, navegar a captura de foto
+                    // El código QR se puede guardar en un ViewModel compartido si es necesario
+                    navController.navigate("photo_capture")
+                },
+                onNavigateToManualEntry = {
+                    // Permitir entrada manual saltando el QR
+                    navController.navigate("photo_capture")
+                },
+                onQRScanned = {
+                    // Alternativa: ir directo a selección de material
+                    navController.navigate("material_selection")
+                }
             )
         }
 
         composable("photo_capture") {
             PhotoCaptureScreen(
-                onPhotoTaken = { navController.navigate("material_selection") },
+                onPhotoTaken = { photoUri ->
+                    // Después de tomar la foto, ir a selección de material
+                    navController.navigate("material_selection")
+                },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
         composable("material_selection") {
             MaterialSelectionScreen(
-                onMaterialSelected = { navController.navigate("ai_validation") },
+                onMaterialSelected = { materialData ->
+                    // Después de seleccionar material, ir a validación AI
+                    navController.navigate("ai_validation")
+                },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

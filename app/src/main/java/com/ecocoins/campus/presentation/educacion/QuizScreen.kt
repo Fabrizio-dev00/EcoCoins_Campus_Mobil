@@ -27,7 +27,7 @@ import com.ecocoins.campus.utils.Resource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizScreen(
-    quizId: Long,
+    quizId: String,  // ⭐ Long -> String
     onNavigateBack: () -> Unit,
     viewModel: EducacionViewModel = hiltViewModel()
 ) {
@@ -35,7 +35,7 @@ fun QuizScreen(
     val resultadoQuiz by viewModel.resultadoQuiz.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
 
-    var respuestasSeleccionadas by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
+    var respuestasSeleccionadas by remember { mutableStateOf<List<Int>>(emptyList()) }  // ⭐ Map -> List
     var mostrarResultado by remember { mutableStateOf(false) }
 
     LaunchedEffect(quizId) {
@@ -109,11 +109,15 @@ fun QuizScreen(
                         PreguntaCard(
                             numero = index + 1,
                             pregunta = pregunta,
-                            respuestaSeleccionada = respuestasSeleccionadas[pregunta.id],
+                            respuestaSeleccionada = respuestasSeleccionadas.getOrNull(index),  // ⭐ Cambio
                             onRespuestaSelected = { opcionIndex ->
-                                respuestasSeleccionadas = respuestasSeleccionadas.toMutableMap().apply {
-                                    put(pregunta.id, opcionIndex)
+                                // ⭐ Actualizar lista en lugar de map
+                                val nuevasRespuestas = respuestasSeleccionadas.toMutableList()
+                                while (nuevasRespuestas.size <= index) {
+                                    nuevasRespuestas.add(-1)
                                 }
+                                nuevasRespuestas[index] = opcionIndex
+                                respuestasSeleccionadas = nuevasRespuestas
                             }
                         )
                     }
@@ -121,15 +125,18 @@ fun QuizScreen(
                     // Botón enviar
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
+                        val todasRespondidas = respuestasSeleccionadas.size == quiz!!.totalPreguntas &&
+                                respuestasSeleccionadas.none { it == -1 }  // ⭐ Cambio
+
                         CustomButton(
                             text = "Enviar Respuestas",
                             onClick = {
-                                viewModel.completarQuiz(quizId, respuestasSeleccionadas)
+                                viewModel.enviarQuiz(quizId, respuestasSeleccionadas)  // ⭐ Cambio
                             },
-                            enabled = respuestasSeleccionadas.size == quiz!!.totalPreguntas
+                            enabled = todasRespondidas
                         )
 
-                        if (respuestasSeleccionadas.size != quiz!!.totalPreguntas) {
+                        if (!todasRespondidas) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Responde todas las preguntas para enviar",
@@ -150,7 +157,7 @@ private fun QuizHeader(
     titulo: String,
     descripcion: String,
     totalPreguntas: Int,
-    recompensa: Long
+    recompensa: Int
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),

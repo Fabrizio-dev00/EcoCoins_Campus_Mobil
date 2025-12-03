@@ -24,7 +24,7 @@ import com.ecocoins.campus.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContenidoDetailScreen(
-    contenidoId: Long,
+    contenidoId: String,  // ⭐ Long -> String
     onNavigateBack: () -> Unit,
     viewModel: EducacionViewModel = hiltViewModel()
 ) {

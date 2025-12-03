@@ -11,17 +11,17 @@ interface ApiService {
     // ============================================================================
 
     @POST("api/auth/login")
-    suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
+    suspend fun login(@Body request: LoginRequest): Response<ApiResponse<User>>
 
     @POST("api/auth/register")
-    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
+    suspend fun register(@Body request: RegisterRequest): Response<ApiResponse<User>>
 
     @GET("api/auth/perfil/{usuarioId}")
-    suspend fun getPerfil(@Path("usuarioId") usuarioId: Long): Response<User>
+    suspend fun getPerfil(@Path("usuarioId") usuarioId: String): Response<User>
 
     @PUT("api/auth/perfil/{usuarioId}")
     suspend fun updatePerfil(
-        @Path("usuarioId") usuarioId: Long,
+        @Path("usuarioId") usuarioId: String,
         @Body user: User
     ): Response<User>
 
@@ -34,12 +34,12 @@ interface ApiService {
 
     @GET("api/reciclajes/usuario/{usuarioId}")
     suspend fun getReciclajesUsuario(
-        @Path("usuarioId") usuarioId: Long
+        @Path("usuarioId") usuarioId: String
     ): Response<List<Reciclaje>>
 
     @GET("api/reciclajes/usuario/{usuarioId}/historial")
     suspend fun getHistorialReciclajes(
-        @Path("usuarioId") usuarioId: Long,
+        @Path("usuarioId") usuarioId: String,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
     ): Response<List<Reciclaje>>
@@ -72,7 +72,7 @@ interface ApiService {
 
     @GET("api/recompensas/canjes/usuario/{usuarioId}/historial")
     suspend fun getHistorialCanjes(
-        @Path("usuarioId") usuarioId: Long,
+        @Path("usuarioId") usuarioId: String,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
     ): Response<List<Canje>>
@@ -88,35 +88,37 @@ interface ApiService {
     suspend fun getRankingGlobal(
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 50
-    ): Response<List<RankingItem>>
+    ): Response<ApiResponse<List<RankingItem>>>  // ⭐ Cambio aquí
 
     @GET("api/ranking/semanal")
     suspend fun getRankingSemanal(
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 50
-    ): Response<List<RankingItem>>
+    ): Response<ApiResponse<List<RankingItem>>>  // ⭐ Cambio aquí
 
     @GET("api/ranking/mensual")
     suspend fun getRankingMensual(
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 50
-    ): Response<List<RankingItem>>
+    ): Response<ApiResponse<List<RankingItem>>>  // ⭐ Cambio aquí
 
     @GET("api/ranking/usuario/{usuarioId}/posicion")
-    suspend fun getPosicionUsuario(@Path("usuarioId") usuarioId: Long): Response<PosicionUsuario>
+    suspend fun getPosicionUsuario(
+        @Path("usuarioId") usuarioId: String
+    ): Response<ApiResponse<PosicionUsuario>>  // ⭐ Cambio aquí
 
     // ============================================================================
     // LOGROS ENDPOINTS - FASE 2
     // ============================================================================
 
     @GET("api/logros/usuario/{usuarioId}")
-    suspend fun getLogrosUsuario(@Path("usuarioId") usuarioId: Long): Response<List<Logro>>
+    suspend fun getLogrosUsuario(@Path("usuarioId") usuarioId: String): Response<ApiResponse<LogrosResponse>>
 
     @GET("api/logros/usuario/{usuarioId}/resumen")
-    suspend fun getResumenLogros(@Path("usuarioId") usuarioId: Long): Response<LogrosResumen>
+    suspend fun getResumenLogros(@Path("usuarioId") usuarioId: String): Response<ApiResponse<LogrosResumen>>
 
     @POST("api/logros/verificar/{usuarioId}")
-    suspend fun verificarLogros(@Path("usuarioId") usuarioId: Long): Response<List<Logro>>
+    suspend fun verificarLogros(@Path("usuarioId") usuarioId: String): Response<ApiResponse<List<Logro>>>
 
     // ============================================================================
     // ESTADÍSTICAS ENDPOINTS - FASE 2
@@ -124,13 +126,13 @@ interface ApiService {
 
     @GET("api/estadisticas/usuario/{usuarioId}")
     suspend fun getEstadisticasUsuario(
-        @Path("usuarioId") usuarioId: Long
+        @Path("usuarioId") usuarioId: String
     ): Response<EstadisticasDetalladas>
 
     @GET("api/estadisticas/usuario/{usuarioId}/resumen")
     suspend fun getResumenEstadisticas(
-        @Path("usuarioId") usuarioId: Long
-    ): Response<ResumenGeneral>
+        @Path("usuarioId") usuarioId: String
+    ): Response<Map<String, Any>>
 
     @GET("api/estadisticas/usuario/{usuarioId}/materiales")
     suspend fun getDistribucionMateriales(
@@ -172,16 +174,16 @@ interface ApiService {
     // ============================================================================
 
     @GET("api/referidos/usuario/{usuarioId}")
-    suspend fun getReferidosInfo(@Path("usuarioId") usuarioId: Long): Response<ReferidosInfo>
+    suspend fun getReferidosInfo(@Path("usuarioId") usuarioId: String): Response<ReferidosInfo>
 
     @POST("api/referidos/generar-codigo/{usuarioId}")
     suspend fun generarCodigoReferido(
-        @Path("usuarioId") usuarioId: Long
+        @Path("usuarioId") usuarioId: String
     ): Response<CodigoReferidoResponse>
 
     @POST("api/referidos/usar-codigo/{usuarioId}")
     suspend fun usarCodigoReferido(
-        @Path("usuarioId") usuarioId: Long,
+        @Path("usuarioId") usuarioId: String,
         @Query("codigo") codigo: String
     ): Response<MessageResponse>
 
@@ -207,42 +209,41 @@ interface ApiService {
     // ============================================================================
 
     @GET("api/educacion/contenidos")
-    suspend fun getContenidosEducativos(): Response<List<ContenidoEducativo>>
+    suspend fun getContenidosEducativos(): Response<ApiResponse<List<ContenidoEducativo>>>  // ⭐
 
     @GET("api/educacion/contenidos/categoria/{categoria}")
     suspend fun getContenidosPorCategoria(
-        @Path("categoria") categoria: String
-    ): Response<List<ContenidoEducativo>>
+        @Path("categoria") categoria: String,
+        tipo: String?
+    ): Response<ApiResponse<List<ContenidoEducativo>>>  // ⭐
 
-    @GET("api/educacion/contenido/{contenidoId}")
-    suspend fun getContenidoById(@Path("contenidoId") contenidoId: Long): Response<ContenidoEducativo>
+    @GET("api/educacion/contenidos/{id}")  // ⭐ Cambiado de /contenido/{id}
+    suspend fun getContenidoById(
+        @Path("id") contenidoId: String  // ⭐ Cambio: Long -> String
+    ): Response<ApiResponse<ContenidoEducativo>>  // ⭐
 
-    @POST("api/educacion/contenido/{contenidoId}/completar/{usuarioId}")
+    @POST("api/educacion/completar")  // ⭐ Cambiado la ruta
     suspend fun completarContenido(
-        @Path("contenidoId") contenidoId: Long,
-        @Path("usuarioId") usuarioId: Long
-    ): Response<MessageResponse>
+        @Body request: CompletarContenidoRequest
+    ): Response<ApiResponse<Map<String, Any>>>  // ⭐
 
-    @GET("api/educacion/usuario/{usuarioId}/progreso")
+    @GET("api/educacion/progreso/{usuarioId}")  // ⭐ Cambiado la ruta
     suspend fun getProgresoEducativo(
-        @Path("usuarioId") usuarioId: Long
-    ): Response<ProgresoEducativo>
+        @Path("usuarioId") usuarioId: String
+    ): Response<ApiResponse<ProgresoEducativo>>  // ⭐
 
     @GET("api/educacion/categorias")
-    suspend fun getCategoriasEducativas(): Response<List<CategoriaEducativa>>
+    suspend fun getCategoriasEducativas(): Response<ApiResponse<List<CategoriaEducativa>>>  // ⭐
 
-    @GET("api/educacion/quizzes")
-    suspend fun getQuizzes(): Response<List<Quiz>>
+    @GET("api/educacion/quiz/{quizId}")  // ⭐ Singular, no plural
+    suspend fun getQuizById(
+        @Path("quizId") quizId: String  // ⭐ Cambio: Long -> String
+    ): Response<ApiResponse<Quiz>>  // ⭐
 
-    @GET("api/educacion/quiz/{quizId}")
-    suspend fun getQuizById(@Path("quizId") quizId: Long): Response<Quiz>
-
-    @POST("api/educacion/quiz/{quizId}/completar/{usuarioId}")
-    suspend fun completarQuiz(
-        @Path("quizId") quizId: Long,
-        @Path("usuarioId") usuarioId: Long,
-        @Body respuestas: Map<Long, Int>
-    ): Response<ResultadoQuiz>
+    @POST("api/educacion/quiz/enviar")  // ⭐ Cambiada la ruta
+    suspend fun enviarQuiz(
+        @Body request: EnviarQuizRequest
+    ): Response<ApiResponse<ResultadoQuiz>>  //
 
     // ============================================================================
     // SOPORTE ENDPOINTS - FASE 4
@@ -255,10 +256,10 @@ interface ApiService {
     suspend fun getFAQsPorCategoria(@Path("categoria") categoria: String): Response<List<FAQ>>
 
     @POST("api/soporte/faq/{faqId}/util")
-    suspend fun marcarFAQUtil(@Path("faqId") faqId: Long): Response<MessageResponse>
+    suspend fun marcarFAQUtil(@Path("faqId") faqId: String): Response<MessageResponse>
 
     @GET("api/soporte/tickets/usuario/{usuarioId}")
-    suspend fun getTicketsUsuario(@Path("usuarioId") usuarioId: Long): Response<List<Ticket>>
+    suspend fun getTicketsUsuario(@Path("usuarioId") usuarioId: String): Response<List<Ticket>>
 
     @GET("api/soporte/ticket/{ticketId}")
     suspend fun getTicketById(@Path("ticketId") ticketId: Long): Response<Ticket>
@@ -269,7 +270,7 @@ interface ApiService {
     @POST("api/soporte/ticket/{ticketId}/responder")
     suspend fun responderTicket(
         @Path("ticketId") ticketId: Long,
-        @Body respuesta: RespuestaTicket
+        @Body respuesta: String
     ): Response<MessageResponse>
 
     @PUT("api/soporte/ticket/{ticketId}/cerrar")

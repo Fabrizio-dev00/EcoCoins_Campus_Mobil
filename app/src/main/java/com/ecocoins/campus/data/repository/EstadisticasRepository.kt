@@ -11,7 +11,7 @@ class EstadisticasRepository @Inject constructor(
     private val apiService: ApiService
 ) {
 
-    suspend fun getEstadisticasUsuario(usuarioId: Long): Flow<Resource<EstadisticasDetalladas>> = flow {
+    suspend fun getEstadisticasUsuario(usuarioId: String): Flow<Resource<EstadisticasDetalladas>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -27,7 +27,7 @@ class EstadisticasRepository @Inject constructor(
         }
     }
 
-    suspend fun getResumenEstadisticas(usuarioId: Long): Flow<Resource<ResumenGeneral>> = flow {
+    suspend fun getResumenEstadisticas(usuarioId: String): Flow<Resource<Map<String, Any>>> = flow {
         try {
             emit(Resource.Loading())
 
