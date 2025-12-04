@@ -1,44 +1,32 @@
 package com.ecocoins.campus.presentation.educacion
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import com.ecocoins.campus.data.model.ContenidoEducativo
-import com.ecocoins.campus.ui.components.EmptyState
-import com.ecocoins.campus.ui.components.ErrorState
-import com.ecocoins.campus.ui.components.LoadingState
-import com.ecocoins.campus.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EducacionScreen(
-    onNavigateToContenido: (String) -> Unit,  // ⭐ Long -> String
-    onNavigateToQuiz: (String) -> Unit,  // ⭐ Long -> String
+    onNavigateToContenido: (String) -> Unit,
+    onNavigateToQuiz: (String) -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: EducacionViewModel = hiltViewModel()
 ) {
     val contenidos by viewModel.contenidos.observeAsState(emptyList())
-    val progreso by viewModel.progreso.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
-    val error by viewModel.error.observeAsState()
 
-    var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Contenidos")  // ⭐ Eliminado "Quizzes" porque no existe en el repository
+    // ⭐ Cargar datos al iniciar la pantalla
+    LaunchedEffect(Unit) {
+        viewModel.loadContenidos()
+    }
 
     Scaffold(
         topBar = {
@@ -51,234 +39,77 @@ fun EducacionScreen(
                 }
             )
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Tabs (solo Contenidos por ahora)
-            if (tabs.size > 1) {  // ⭐ Solo mostrar tabs si hay más de uno
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = MaterialTheme.colorScheme.surface
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = { Text(title) }
-                        )
-                    }
-                }
-            }
-
-            when {
-                isLoading -> {
-                    LoadingState(message = "Cargando contenidos...")
-                }
-                error != null -> {
-                    ErrorState(
-                        message = error ?: "Error desconocido",
-                        onRetry = { viewModel.loadContenidos() }
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Progreso
-                        item {
-                            progreso?.let { ProgresoEducativoCard(it) }
-                        }
-
-                        // Contenidos
-                        if (contenidos.isEmpty()) {
-                            item {
-                                EmptyState(
-                                    icon = Icons.Default.School,
-                                    title = "Sin contenidos",
-                                    message = "No hay contenidos disponibles"
-                                )
-                            }
-                        } else {
-                            items(contenidos) { contenido ->
-                                ContenidoCard(
-                                    contenido = contenido,
-                                    onClick = { onNavigateToContenido(contenido.id) }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProgresoEducativoCard(progreso: com.ecocoins.campus.data.model.ProgresoEducativo) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = PlasticBlue.copy(alpha = 0.1f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    ) { padding ->
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-                Column {
-                    Text(
-                        text = "Tu Progreso",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${progreso.contenidosCompletados}/${progreso.totalContenidos}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "+${progreso.ecoCoinsGanados}",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EcoOrange
-                    )
-                    Text(
-                        text = "EcoCoins ganados",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(contenidos) { contenido ->
+                    ContenidoCard(
+                        contenido = contenido,
+                        onClick = {
+                            if (contenido.tipo == "QUIZ") {
+                                onNavigateToQuiz(contenido.id)
+                            } else {
+                                onNavigateToContenido(contenido.id)
+                            }
+                        }
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LinearProgressIndicator(
-                progress = progreso.progresoPorcentaje.toFloat() / 100f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = PlasticBlue,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "${String.format("%.0f", progreso.progresoPorcentaje)}% completado",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContenidoCard(
-    contenido: ContenidoEducativo,
+fun ContenidoCard(
+    contenido: com.ecocoins.campus.data.model.ContenidoEducativo,
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp)
         ) {
-            // Imagen
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(
-                        color = if (contenido.imagenUrl != null)
-                            MaterialTheme.colorScheme.surfaceVariant
-                        else
-                            EcoGreenLight.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (contenido.imagenUrl != null) {
-                    AsyncImage(
-                        model = contenido.imagenUrl,
-                        contentDescription = contenido.titulo,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.School,
-                        contentDescription = contenido.titulo,
-                        tint = EcoGreenPrimary,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Información
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = contenido.titulo,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = contenido.descripcion,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.AccessTime,
-                        contentDescription = "Duración",
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${contenido.duracionMinutos} min",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "+${contenido.recompensaEcoCoins} EC",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = EcoOrange
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.Default.ArrowForward,
-                contentDescription = "Ver",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = contenido.titulo,
+                style = MaterialTheme.typography.titleMedium
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = contenido.descripcion,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${contenido.duracionMinutos} min",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "+${contenido.recompensaEcoCoins} EC",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

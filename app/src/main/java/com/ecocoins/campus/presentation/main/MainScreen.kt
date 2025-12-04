@@ -32,6 +32,9 @@ import com.ecocoins.campus.presentation.reciclajes.ReciclajesScreen
 import com.ecocoins.campus.presentation.recompensas.RecompensasScreen
 import com.ecocoins.campus.presentation.scanner.*
 import com.ecocoins.campus.presentation.settings.SettingsScreen
+import com.ecocoins.campus.presentation.soporte.FAQScreen  // ⭐ NUEVO
+import com.ecocoins.campus.presentation.soporte.SoporteScreen  // ⭐ NUEVO
+import com.ecocoins.campus.presentation.soporte.TicketDetailScreen  // ⭐ NUEVO
 
 sealed class BottomNavItem(
     val route: String,
@@ -64,7 +67,7 @@ fun MainScreen(
     )
 
     Scaffold(
-        topBar = {  // ⭐ NUEVO TOPBAR
+        topBar = {
             TopAppBar(
                 title = {
                     Column {
@@ -293,7 +296,7 @@ fun MainScreen(
                 )
             }
 
-            // ⭐⭐⭐ PERFIL Y CONFIGURACIÓN ⭐⭐⭐
+            // PERFIL Y CONFIGURACIÓN
             composable(Screen.Perfil.route) {
                 PerfilScreen(
                     onNavigateToEdit = { navController.navigate(Screen.EditPerfil.route) },
@@ -313,13 +316,52 @@ fun MainScreen(
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToLogin = onNavigateToLogout
+                    onNavigateToLogin = onNavigateToLogout,
+                    onNavigateToFAQs = { navController.navigate(Screen.FAQ.route) },
+                    onNavigateToSoporte = { navController.navigate(Screen.Soporte.route) }
                 )
             }
 
             composable(Screen.Notificaciones.route) {
                 NotificacionesScreen(
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // ⭐⭐⭐ SOPORTE - NUEVAS RUTAS ⭐⭐⭐
+
+            composable(Screen.FAQ.route) {
+                FAQScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Soporte.route) {
+                SoporteScreen(
+                    onNavigateToFAQ = {
+                        navController.navigate(Screen.FAQ.route)
+                    },
+                    onNavigateToTicket = { ticketId ->
+                        navController.navigate(Screen.TicketDetail.createRoute(ticketId))
+                    },
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.TicketDetail.route,
+                arguments = listOf(
+                    navArgument("ticketId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val ticketId = backStackEntry.arguments?.getString("ticketId") ?: ""
+                TicketDetailScreen(
+                    ticketId = ticketId.toLongOrNull() ?: 0L,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
                 )
             }
         }

@@ -10,178 +10,155 @@ import javax.inject.Inject
 class EducacionRepository @Inject constructor(
     private val apiService: ApiService
 ) {
-
-    suspend fun getContenidosEducativos(): Flow<Resource<List<ContenidoEducativo>>> = flow {
+    fun getContenidosEducativos(): Flow<Resource<List<ContenidoEducativo>>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.getContenidosEducativos()
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
                 } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
+                    emit(Resource.Error(body?.message ?: "Error desconocido"))
                 }
             } else {
-                emit(Resource.Error("Error al obtener contenidos: ${response.message()}"))
+                emit(Resource.Error("Error al obtener contenidos: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun getContenidosPorCategoria(categoria: String?, tipo: String? = null): Flow<Resource<List<ContenidoEducativo>>> = flow {
+    fun getContenidosPorCategoria(categoria: String, tipo: String?): Flow<Resource<List<ContenidoEducativo>>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
-            val response = apiService.getContenidosPorCategoria(categoria.toString(), tipo)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
+            val response = apiService.getContenidosPorCategoria(categoria, tipo)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
                 } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
+                    emit(Resource.Error(body?.message ?: "Error desconocido"))
                 }
             } else {
-                emit(Resource.Error("Error al obtener contenidos: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun getContenidoById(contenidoId: String): Flow<Resource<ContenidoEducativo>> = flow {
+    fun getContenidoById(contenidoId: String): Flow<Resource<ContenidoEducativo>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.getContenidoById(contenidoId)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
                 } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
+                    emit(Resource.Error(body?.message ?: "Contenido no encontrado"))
                 }
             } else {
-                emit(Resource.Error("Error al obtener contenido: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun completarContenido(contenidoId: String, usuarioId: String): Flow<Resource<Map<String, Any>>> = flow {
+    fun completarContenido(contenidoId: String, usuarioId: String): Flow<Resource<Map<String, Any>>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
-            val request = CompletarContenidoRequest(usuarioId, contenidoId)
-            val response = apiService.completarContenido(request)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
+            val response = apiService.completarContenido(CompletarContenidoRequest(usuarioId, contenidoId))
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
                 } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
+                    emit(Resource.Error(body?.message ?: "Error al completar"))
                 }
             } else {
-                emit(Resource.Error("Error al completar contenido: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 
-    suspend fun getProgresoEducativo(usuarioId: String): Flow<Resource<ProgresoEducativo>> = flow {
+    fun getQuizById(quizId: String): Flow<Resource<Quiz>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
-            val response = apiService.getProgresoEducativo(usuarioId)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
-                } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
-                }
-            } else {
-                emit(Resource.Error("Error al obtener progreso: ${response.message()}"))
-            }
-        } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
-        }
-    }
-
-    suspend fun getCategoriasEducativas(): Flow<Resource<List<CategoriaEducativa>>> = flow {
-        try {
-            emit(Resource.Loading())
-
-            val response = apiService.getCategoriasEducativas()
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
-                } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
-                }
-            } else {
-                emit(Resource.Error("Error al obtener categorías: ${response.message()}"))
-            }
-        } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
-        }
-    }
-
-    suspend fun getQuizById(quizId: String): Flow<Resource<Quiz>> = flow {
-        try {
-            emit(Resource.Loading())
-
             val response = apiService.getQuizById(quizId)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
                 } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
+                    emit(Resource.Error(body?.message ?: "Quiz no encontrado"))
                 }
             } else {
-                emit(Resource.Error("Error al obtener quiz: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun enviarQuiz(
-        quizId: String,
-        usuarioId: String,
-        respuestas: List<Int>
-    ): Flow<Resource<ResultadoQuiz>> = flow {
+    fun enviarQuiz(quizId: String, usuarioId: String, respuestas: List<Int>): Flow<Resource<ResultadoQuiz>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
-            val request = EnviarQuizRequest(usuarioId, quizId, respuestas)
-            val response = apiService.enviarQuiz(request)
-
-            if (response.isSuccessful && response.body() != null) {
-                val apiResponse = response.body()!!
-                if (apiResponse.success && apiResponse.data != null) {
-                    emit(Resource.Success(apiResponse.data))
+            val response = apiService.enviarQuiz(EnviarQuizRequest(usuarioId, quizId, respuestas))
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
                 } else {
-                    emit(Resource.Error(apiResponse.message ?: "Error desconocido"))
+                    emit(Resource.Error(body?.message ?: "Error al enviar quiz"))
                 }
             } else {
-                emit(Resource.Error("Error al enviar quiz: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage ?: "Error desconocido"}"))
+            emit(Resource.Error("Error: ${e.message}"))
+        }
+    }
+
+    fun getProgresoEducativo(usuarioId: String): Flow<Resource<ProgresoEducativo>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = apiService.getProgresoEducativo(usuarioId)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Error al obtener progreso"))
+                }
+            } else {
+                emit(Resource.Error("Error: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("Error: ${e.message}"))
+        }
+    }
+
+    fun getCategoriasEducativas(): Flow<Resource<List<CategoriaEducativa>>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = apiService.getCategoriasEducativas()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    emit(Resource.Success(body.data))
+                } else {
+                    emit(Resource.Error(body?.message ?: "Error al obtener categorías"))
+                }
+            } else {
+                emit(Resource.Error("Error: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 }

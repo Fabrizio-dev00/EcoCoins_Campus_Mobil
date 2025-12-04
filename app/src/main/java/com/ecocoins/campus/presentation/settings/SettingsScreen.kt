@@ -21,6 +21,8 @@ import com.ecocoins.campus.ui.theme.*
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToFAQs: () -> Unit,        // ⭐ NUEVO
+    onNavigateToSoporte: () -> Unit,     // ⭐ NUEVO
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val userName by viewModel.userName.observeAsState("")
@@ -112,7 +114,7 @@ fun SettingsScreen(
                     titulo = "Notificaciones",
                     descripcion = "Recibir notificaciones de la app",
                     checked = notificationsEnabled,
-                    onCheckedChange = { viewModel.toggleNotifications(enabled = true) }
+                    onCheckedChange = { viewModel.toggleNotifications(it) }
                 )
             }
 
@@ -122,7 +124,7 @@ fun SettingsScreen(
                     titulo = "Modo Oscuro",
                     descripcion = "Activar tema oscuro",
                     checked = darkModeEnabled,
-                    onCheckedChange = { viewModel.toggleDarkMode(enabled = true) }
+                    onCheckedChange = { viewModel.toggleDarkMode(it) }
                 )
             }
 
@@ -159,11 +161,20 @@ fun SettingsScreen(
                 )
             }
 
+            // ⭐ NUEVAS OPCIONES SEPARADAS
             item {
                 SettingOptionCard(
                     icon = Icons.Default.Help,
-                    titulo = "Ayuda y Soporte",
-                    onClick = { /* TODO */ }
+                    titulo = "Preguntas Frecuentes",
+                    onClick = onNavigateToFAQs
+                )
+            }
+
+            item {
+                SettingOptionCard(
+                    icon = Icons.Default.SupportAgent,
+                    titulo = "Soporte Técnico",
+                    onClick = onNavigateToSoporte
                 )
             }
 

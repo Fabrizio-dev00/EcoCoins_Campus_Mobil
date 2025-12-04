@@ -1,6 +1,7 @@
 package com.ecocoins.campus.data.repository
 
 import com.ecocoins.campus.data.model.FAQ
+import com.ecocoins.campus.data.model.MessageResponse
 import com.ecocoins.campus.data.model.Ticket
 import com.ecocoins.campus.data.remote.ApiService
 import com.ecocoins.campus.utils.Resource
@@ -11,132 +12,125 @@ import javax.inject.Inject
 class SoporteRepository @Inject constructor(
     private val apiService: ApiService
 ) {
-
-    suspend fun getFAQs(): Flow<Resource<List<FAQ>>> = flow {
+    fun getFAQs(): Flow<Resource<List<FAQ>>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.getFAQs()
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+            if (response.isSuccessful) {
+                emit(Resource.Success(response.body() ?: emptyList()))
             } else {
-                emit(Resource.Error("Error al obtener FAQs: ${response.message()}"))
+                emit(Resource.Error("Error al obtener FAQs: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun getFAQsPorCategoria(categoria: String): Flow<Resource<List<FAQ>>> = flow {
+    fun getFAQsPorCategoria(categoria: String): Flow<Resource<List<FAQ>>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.getFAQsPorCategoria(categoria)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+            if (response.isSuccessful) {
+                emit(Resource.Success(response.body() ?: emptyList()))
             } else {
-                emit(Resource.Error("Error al obtener FAQs: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun marcarFAQUtil(faqId: String): Flow<Resource<String>> = flow {
+    fun marcarFAQUtil(faqId: String): Flow<Resource<MessageResponse>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.marcarFAQUtil(faqId)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!.mensaje))
+            if (response.isSuccessful) {
+                emit(Resource.Success(response.body() ?: MessageResponse("OK")))
             } else {
-                emit(Resource.Error("Error al marcar FAQ: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 
-    suspend fun getTicketsUsuario(usuarioId: String): Flow<Resource<List<Ticket>>> = flow {
+    fun getTicketsUsuario(usuarioId: String): Flow<Resource<List<Ticket>>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.getTicketsUsuario(usuarioId)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+            if (response.isSuccessful) {
+                emit(Resource.Success(response.body() ?: emptyList()))
             } else {
-                emit(Resource.Error("Error al obtener tickets: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error de conexión: ${e.message}"))
         }
     }
 
-    suspend fun getTicketById(ticketId: Long): Flow<Resource<Ticket>> = flow {
+    fun getTicketById(ticketId: Long): Flow<Resource<Ticket>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.getTicketById(ticketId)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+            if (response.isSuccessful) {
+                val ticket = response.body()
+                if (ticket != null) {
+                    emit(Resource.Success(ticket))
+                } else {
+                    emit(Resource.Error("Ticket no encontrado"))
+                }
             } else {
-                emit(Resource.Error("Error al obtener ticket: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 
-    suspend fun crearTicket(ticket: Ticket): Flow<Resource<Ticket>> = flow {
+    fun crearTicket(ticket: Ticket): Flow<Resource<Ticket>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.crearTicket(ticket)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!))
+            if (response.isSuccessful) {
+                val createdTicket = response.body()
+                if (createdTicket != null) {
+                    emit(Resource.Success(createdTicket))
+                } else {
+                    emit(Resource.Error("Error al crear ticket"))
+                }
             } else {
-                emit(Resource.Error("Error al crear ticket: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 
-    suspend fun responderTicket(ticketId: Long, respuesta: String): Flow<Resource<String>> = flow {
+    fun responderTicket(ticketId: Long, respuesta: String): Flow<Resource<String>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.responderTicket(ticketId, respuesta)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!.mensaje))
+            if (response.isSuccessful) {
+                emit(Resource.Success(response.body()?.mensaje ?: "Respuesta enviada"))
             } else {
-                emit(Resource.Error("Error al responder ticket: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 
-    suspend fun cerrarTicket(ticketId: Long): Flow<Resource<String>> = flow {
+    fun cerrarTicket(ticketId: Long): Flow<Resource<String>> = flow {
+        emit(Resource.Loading())
         try {
-            emit(Resource.Loading())
-
             val response = apiService.cerrarTicket(ticketId)
-
-            if (response.isSuccessful && response.body() != null) {
-                emit(Resource.Success(response.body()!!.mensaje))
+            if (response.isSuccessful) {
+                emit(Resource.Success(response.body()?.mensaje ?: "Ticket cerrado"))
             } else {
-                emit(Resource.Error("Error al cerrar ticket: ${response.message()}"))
+                emit(Resource.Error("Error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error("Error de conexión: ${e.localizedMessage}"))
+            emit(Resource.Error("Error: ${e.message}"))
         }
     }
 }

@@ -4,7 +4,7 @@ object Constants {
     // API Base URL - CAMBIAR A TU URL
     const val BASE_URL = "http://10.0.2.2:8080/" // Emulador Android
     //const val BASE_URL = "http://localhost:8080/" // Dispositivo físico con USB
-    //const val BASE_URL = "http://127.0.0.1:8080/" // Dispositivo físico con WiFi
+    //const val BASE_URL = "http://192.168.1.37:8080/" // Dispositivo físico con WiFi
 
     // Endpoints
     const val AUTH_LOGIN = "api/auth/login"

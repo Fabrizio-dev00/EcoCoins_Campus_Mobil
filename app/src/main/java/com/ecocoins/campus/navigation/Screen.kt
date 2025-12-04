@@ -57,7 +57,7 @@ sealed class Screen(val route: String) {
 
     // Soporte
     object Soporte : Screen("soporte")
-    object FAQ : Screen("faq")
+    object FAQ : Screen("faqs")
     object TicketDetail : Screen("ticket_detail/{ticketId}") {
         fun createRoute(ticketId: String) = "ticket_detail/$ticketId"
     }

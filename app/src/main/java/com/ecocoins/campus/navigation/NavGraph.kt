@@ -252,8 +252,9 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
-                onNavigateToDetail = TODO(),
-                viewModel = TODO()
+                onNavigateToDetail = { recompensaId ->
+                    navController.navigate(Screen.RecompensaDetail.createRoute(recompensaId))
+                }
             )
         }
 
@@ -338,10 +339,10 @@ fun NavGraph(
         composable(
             route = Screen.ContenidoDetail.route,
             arguments = listOf(
-                navArgument("contenidoId") { type = NavType.StringType }  // ⭐ LongType -> StringType
+                navArgument("contenidoId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val contenidoId = backStackEntry.arguments?.getString("contenidoId") ?: ""  // ⭐ getLong -> getString
+            val contenidoId = backStackEntry.arguments?.getString("contenidoId") ?: ""
             ContenidoDetailScreen(
                 contenidoId = contenidoId,
                 onNavigateBack = {
@@ -353,10 +354,10 @@ fun NavGraph(
         composable(
             route = Screen.Quiz.route,
             arguments = listOf(
-                navArgument("quizId") { type = NavType.StringType }  // ⭐ LongType -> StringType
+                navArgument("quizId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val quizId = backStackEntry.arguments?.getString("quizId") ?: ""  // ⭐ getLong -> getString
+            val quizId = backStackEntry.arguments?.getString("quizId") ?: ""
             QuizScreen(
                 quizId = quizId,
                 onNavigateBack = {
@@ -395,7 +396,7 @@ fun NavGraph(
             )
         }
 
-        composable(route = Screen.FAQ.route) {
+        composable(route = "faqs") {
             FAQScreen(
                 onNavigateBack = {
                     navController.popBackStack()
@@ -430,10 +431,15 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
-                onNavigateToSettings = TODO(),
-                onNavigateToEstadisticas = TODO(),
-                onNavigateToLogros = TODO(),
-                viewModel = TODO()
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToEstadisticas = {
+                    navController.navigate(Screen.Estadisticas.route)
+                },
+                onNavigateToLogros = {
+                    navController.navigate(Screen.Logros.route)
+                }
             )
         }
 
@@ -446,7 +452,7 @@ fun NavGraph(
         }
 
         // ====================================================================
-        // SETTINGS
+        // SETTINGS - ⭐ ACTUALIZADO CON NAVEGACIÓN A FAQs Y SOPORTE
         // ====================================================================
 
         composable(route = Screen.Settings.route) {
@@ -458,6 +464,12 @@ fun NavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
                     }
+                },
+                onNavigateToFAQs = {                    // ⭐ NUEVO
+                    navController.navigate(Screen.FAQ.route)
+                },
+                onNavigateToSoporte = {                 // ⭐ NUEVO
+                    navController.navigate(Screen.Soporte.route)
                 }
             )
         }
